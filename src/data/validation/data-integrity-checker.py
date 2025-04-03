@@ -35,7 +35,7 @@ def verify_data_integrity(base_dir='data/raw'):
         }
         
         # Verificar archivos importantes
-        essential_files = ['ADNIMERGE.csv', 'Demographics.csv']
+        essential_files = ['DXSUM.csv', 'CDR.csv', 'PTDEMOG.csv']
         for file in essential_files:
             file_path = os.path.join(adni_dir, file)
             if not os.path.exists(file_path):
@@ -103,7 +103,7 @@ def verify_data_integrity(base_dir='data/raw'):
         report['missing_files'].append(oasis_dir)
     
     # Verificar datos de actividad
-    activity_dir = os.path.join(base_dir, 'activity')
+    activity_dir = os.path.join(base_dir, 'synthetic')
     if os.path.exists(activity_dir):
         activity_files = os.listdir(activity_dir)
         report['datasets']['activity'] = {
@@ -149,7 +149,7 @@ def verify_data_integrity(base_dir='data/raw'):
     
     return report
 
-def save_verification_report(report, output_path='data/verification_report.json'):
+def save_verification_report(report, output_path='reports/data/verification_report.json'):
     """Guarda el informe de verificación en formato JSON"""
     import json
     

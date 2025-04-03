@@ -1,0 +1,48 @@
+{
+    "timestamp": "2025-04-03 10:45:23",
+    "datasets": {
+        "adni": {
+            "path": "data/raw\\adni",
+            "files_count": 5,
+            "files": [
+                "biomarkers",
+                "clinical",
+                "demographics",
+                "genetics",
+                "images"
+            ]
+        },
+        "oasis": {
+            "path": "data/raw\\oasis",
+            "files_count": 3,
+            "files": [
+                "clinical",
+                "demographics",
+                "images"
+            ],
+            "mri_count": 0
+        },
+        "activity": {
+            "path": "data/raw\\synthetic",
+            "files_count": 2,
+            "files": [
+                "plots",
+                "synthetic_activity_sleep_data.csv"
+            ]
+        }
+    },
+    "missing_files": [
+        "data/raw\\adni\\DXSUM.csv",
+        "data/raw\\adni\\CDR.csv",
+        "data/raw\\adni\\PTDEMOG.csv"
+    ],
+    "corrupted_files": [],
+    "summary": {
+        "total_datasets": 3,
+        "missing_files_count": 3,
+        "corrupted_files_count": 0,
+        "adni_available": true,
+        "oasis_available": true,
+        "activity_available": true
+    }
+}
