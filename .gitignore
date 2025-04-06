@@ -1,1 +1,89 @@
 .qodo
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Entornos virtuales
+venv/
+env/
+.env/
+.venv/
+ENV/
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Notebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Archivos de distribución
+*.tar.gz
+*.zip
+*.rar
+
+# Archivos de datos (importante para datos médicos sensibles)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/activity/synthetic_activity_data.csv
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Imágenes neurológicas
+*.nii
+*.nii.gz
+*.dcm
+*.img
+*.hdr
+
+# Archivos grandes (GitHub tiene límite de 100MB)
+*.h5
+*.hdf5
+*.pkl
+*.joblib
+
+# Modelos entrenados
+models/*
+!models/.gitkeep
+
+# Logs y resultados
+logs/
+results/
+
+# Archivos de configuración con credenciales
+config/credentials.json
+config/secrets.yaml
+.env
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Archivos temporales
+.temp/
+.tmp/
+tmp/
+temp/
