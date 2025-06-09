@@ -164,7 +164,7 @@ class NeuroImagingFeatureEngineer:
                 df[outlier_col] = ((df[col] < lower_bound) | (df[col] > upper_bound)).astype(int)
                 self.feature_names.append(outlier_col)
 
-def engineer_neuroimaging_features(df):
+def engineer_mri_features(df):
     """
     Función principal para feature engineering de neuroimagen.
     

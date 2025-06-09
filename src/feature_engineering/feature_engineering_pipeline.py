@@ -19,7 +19,8 @@ warnings.filterwarnings('ignore')
 # Importar módulos de feature engineering por modalidad
 from fe_demographics import engineer_demographic_features
 from fe_genetics import engineer_genetic_features
-from fe_neuroimaging import engineer_neuroimaging_features
+from fe_mri import engineer_mri_features  # CAMBIO: neuroimaging -> mri
+from fe_pet import engineer_pet_features  # NUEVO: agregado fe_pet
 from fe_biomarkers import engineer_biomarker_features
 from fe_clinical import engineer_clinical_features
 from fe_synthetic_activity_sleep import engineer_activity_sleep_features
@@ -94,13 +95,21 @@ class FeatureEngineeringPipeline:
             print(f"   ⚠️  Error en genetics: {str(e)[:50]}...")
             self.feature_summary['genetics'] = 'ERROR'
         
-        # Neuroimaging
+        # MRI (anteriormente Neuroimaging)
         try:
-            df = engineer_neuroimaging_features(df)
-            self.feature_summary['neuroimaging'] = 'OK'
+            df = engineer_mri_features(df)  # CAMBIO: función renombrada
+            self.feature_summary['mri'] = 'OK'  # CAMBIO: clave renombrada
         except Exception as e:
-            print(f"   ⚠️  Error en neuroimaging: {str(e)[:50]}...")
-            self.feature_summary['neuroimaging'] = 'ERROR'
+            print(f"   ⚠️  Error en MRI: {str(e)[:50]}...")  # CAMBIO: mensaje actualizado
+            self.feature_summary['mri'] = 'ERROR'  # CAMBIO: clave renombrada
+        
+        # PET (NUEVO)
+        try:
+            df = engineer_pet_features(df)  # NUEVO: procesamiento PET
+            self.feature_summary['pet'] = 'OK' 
+        except Exception as e:
+            print(f"   ⚠️  Error en PET: {str(e)[:50]}...")  
+            self.feature_summary['pet'] = 'ERROR'  
         
         # Biomarkers
         try:
@@ -161,6 +170,17 @@ class FeatureEngineeringPipeline:
             # Interacción: estilo de vida protector vs riesgo biomarcador
             df['lifestyle_biomarker_interaction'] = df[lifestyle_col] * (1 - df[biomarker_col])
             print("   ✅ Interacción estilo de vida - biomarcadores")
+
+        # 4. NUEVO: Score de neuroimagen combinado (MRI + PET)
+        mri_risk_cols = [col for col in df.columns if 'mri' in col.lower() and 'risk' in col.lower()]
+        pet_risk_cols = [col for col in df.columns if 'pet' in col.lower() and 'risk' in col.lower()]
+        
+        if mri_risk_cols and pet_risk_cols:
+            mri_col = mri_risk_cols[0]
+            pet_col = pet_risk_cols[0]
+            # Combinar riesgo estructural (MRI) con funcional (PET)
+            df['neuroimaging_combined_risk'] = (df[mri_col].fillna(0) + df[pet_col].fillna(0)) / 2
+            print("   ✅ Score combinado MRI-PET")
         
         return df
     
@@ -173,50 +193,78 @@ class FeatureEngineeringPipeline:
         risk_components = []
         weights = []
         
-        # Componente 1: Riesgo Genético (peso: 0.25)
+        # Componente 1: Riesgo Genético (peso: 0.20) - AJUSTADO para incluir neuroimagen
         genetic_risk_cols = [col for col in df.columns if 'APOE_risk_score' in col or 'genetic_risk' in col.lower()]
         if genetic_risk_cols:
             risk_col = genetic_risk_cols[0]
             # Normalizar a 0-1
             df[f'{risk_col}_norm'] = (df[risk_col] - df[risk_col].min()) / (df[risk_col].max() - df[risk_col].min() + 1e-6)
             risk_components.append(f'{risk_col}_norm')
-            weights.append(0.25)
+            weights.append(0.20)  # CAMBIO: reducido de 0.25
             self.risk_score_components.append(f"Genético ({risk_col})")
         
-        # Componente 2: Riesgo Demográfico (peso: 0.20)
+        # Componente 2: Riesgo Demográfico (peso: 0.15) - AJUSTADO
         demo_risk_cols = [col for col in df.columns if 'age_risk' in col.lower() or 'demographic_risk' in col.lower()]
         if demo_risk_cols:
             risk_col = demo_risk_cols[0]
             df[f'{risk_col}_norm'] = (df[risk_col] - df[risk_col].min()) / (df[risk_col].max() - df[risk_col].min() + 1e-6)
             risk_components.append(f'{risk_col}_norm')
-            weights.append(0.20)
+            weights.append(0.15)  # CAMBIO: reducido de 0.20
             self.risk_score_components.append(f"Demográfico ({risk_col})")
         
-        # Componente 3: Riesgo Biomarcador (peso: 0.30)
+        # Componente 3: Riesgo Biomarcador (peso: 0.25) - AJUSTADO
         biomarker_risk_cols = [col for col in df.columns if 'biomarker' in col.lower() and 'risk' in col.lower()]
         if biomarker_risk_cols:
             risk_col = biomarker_risk_cols[0]
             df[f'{risk_col}_norm'] = (df[risk_col] - df[risk_col].min()) / (df[risk_col].max() - df[risk_col].min() + 1e-6)
             risk_components.append(f'{risk_col}_norm')
-            weights.append(0.30)
+            weights.append(0.25)  # CAMBIO: reducido de 0.30
             self.risk_score_components.append(f"Biomarcador ({risk_col})")
         
-        # Componente 4: Riesgo Conductual (peso: 0.15)
+        # Componente 4: NUEVO - Riesgo Neuroimagen Combinado (peso: 0.25)
+        neuroimaging_combined_cols = [col for col in df.columns if 'neuroimaging_combined_risk' in col]
+        if neuroimaging_combined_cols:
+            risk_col = neuroimaging_combined_cols[0]
+            # Normalizar a 0-1
+            df[f'{risk_col}_norm'] = (df[risk_col] - df[risk_col].min()) / (df[risk_col].max() - df[risk_col].min() + 1e-6)
+            risk_components.append(f'{risk_col}_norm')
+            weights.append(0.25)  # NUEVO: peso significativo para neuroimagen
+            self.risk_score_components.append(f"Neuroimagen ({risk_col})")
+        else:
+            # Fallback: usar MRI o PET individual si no hay combinado
+            mri_risk_cols = [col for col in df.columns if 'mri' in col.lower() and 'risk' in col.lower()]
+            pet_risk_cols = [col for col in df.columns if 'pet' in col.lower() and 'risk' in col.lower()]
+            
+            if mri_risk_cols:
+                risk_col = mri_risk_cols[0]
+                df[f'{risk_col}_norm'] = (df[risk_col] - df[risk_col].min()) / (df[risk_col].max() - df[risk_col].min() + 1e-6)
+                risk_components.append(f'{risk_col}_norm')
+                weights.append(0.15)  # PESO REDUCIDO si solo hay MRI
+                self.risk_score_components.append(f"MRI ({risk_col})")
+            
+            if pet_risk_cols:
+                risk_col = pet_risk_cols[0]
+                df[f'{risk_col}_norm'] = (df[risk_col] - df[risk_col].min()) / (df[risk_col].max() - df[risk_col].min() + 1e-6)
+                risk_components.append(f'{risk_col}_norm')
+                weights.append(0.10)  # PESO REDUCIDO si solo hay PET
+                self.risk_score_components.append(f"PET ({risk_col})")
+        
+        # Componente 5: Riesgo Conductual (peso: 0.10) - AJUSTADO
         behavioral_risk_cols = [col for col in df.columns if 'behavioral_risk' in col.lower()]
         if behavioral_risk_cols:
             risk_col = behavioral_risk_cols[0]
             df[f'{risk_col}_norm'] = df[risk_col]  # Ya normalizado 0-1
             risk_components.append(f'{risk_col}_norm')
-            weights.append(0.15)
+            weights.append(0.10)  # CAMBIO: reducido de 0.15
             self.risk_score_components.append(f"Conductual ({risk_col})")
         
-        # Componente 5: Riesgo Clínico (peso: 0.10)
+        # Componente 6: Riesgo Clínico (peso: 0.05) - AJUSTADO
         clinical_risk_cols = [col for col in df.columns if 'clinical' in col.lower() and 'risk' in col.lower()]
         if clinical_risk_cols:
             risk_col = clinical_risk_cols[0]
             df[f'{risk_col}_norm'] = (df[risk_col] - df[risk_col].min()) / (df[risk_col].max() - df[risk_col].min() + 1e-6)
             risk_components.append(f'{risk_col}_norm')
-            weights.append(0.10)
+            weights.append(0.05)  # CAMBIO: reducido de 0.10
             self.risk_score_components.append(f"Clínico ({risk_col})")
         
         # Calcular Score de Riesgo Compuesto
@@ -297,10 +345,11 @@ class FeatureEngineeringPipeline:
             'input_shape': f"{df.shape[0]} × {df.shape[1]}",
             'modality_status': self.feature_summary,
             'risk_score_components': self.risk_score_components,
-            'output_path': output_path
+            'output_path': str(output_path)
         }
         
-        metadata_path = output_path.replace('.csv', '_metadata.json')
+        #metadata_path = output_path.replace('.csv', '_metadata.json')
+        metadata_path = output_path.with_name(output_path.stem + '_metadata.json') # Manejo correcto para objetos PathLib
         import json
         with open(metadata_path, 'w') as f:
             json.dump(metadata, f, indent=2)

@@ -12,7 +12,8 @@ Fase: 3 - Feature Engineering y Selección
 Estructura del módulo:
 - fe_demographics.py: Features demográficas y socioeconómicas
 - fe_genetics.py: Features genéticas y APOE
-- fe_neuroimaging.py: Features de neuroimagen (MRI/PET)
+- fe_mri.py: Features de neuroimagen estructural (MRI)
+- fe_pet.py: Features de neuroimagen funcional (PET)
 - fe_biomarkers.py: Features de biomarcadores en fluidos
 - fe_clinical.py: Features clínicas y cognitivas
 - fe_synthetic_activity_sleep.py: Features de actividad y sueño
@@ -27,7 +28,8 @@ __description__ = "Feature engineering multimodal para detección de Alzheimer"
 # Importar clases principales
 from .fe_demographics import DemographicsFeatureEngineering
 from .fe_genetics import GeneticsFeatureEngineering
-from .fe_neuroimaging import NeuroimagingFeatureEngineering
+from .fe_mri import NeuroImagingFeatureEngineer  # CAMBIO: fe_neuroimaging -> fe_mri
+from .fe_pet import PETFeatureEngineer  # NUEVO: agregado fe_pet
 from .fe_biomarkers import BiomarkersFeatureEngineering
 from .fe_clinical import ClinicalFeatureEngineering
 from .fe_synthetic_activity_sleep import ActivitySleepFeatureEngineering
@@ -37,7 +39,8 @@ from .feature_engineering_pipeline import FeatureEngineeringPipeline
 __all__ = [
     'DemographicsFeatureEngineering',
     'GeneticsFeatureEngineering', 
-    'NeuroimagingFeatureEngineering',
+    'NeuroImagingFeatureEngineer',  # CAMBIO: mantener nombre original de la clase
+    'PETFeatureEngineer',  # NUEVO: agregada clase PET
     'BiomarkersFeatureEngineering',
     'ClinicalFeatureEngineering',
     'ActivitySleepFeatureEngineering',
@@ -51,9 +54,10 @@ DEFAULT_CONFIG = {
     'temporal_window_days': 365,
     'feature_selection_methods': ['univariate', 'recursive', 'clinical_relevance'],
     'risk_score_components': {
-        'cognitive': 0.3,
+        'cognitive': 0.25,  # CAMBIO: reducido de 0.3
         'biomarker': 0.25,
-        'neuroimaging': 0.2,
+        'mri': 0.15,  # CAMBIO: neuroimaging dividido en MRI y PET
+        'pet': 0.10,  # NUEVO: componente PET
         'genetic': 0.15,
         'activity_sleep': 0.1
     },
@@ -79,9 +83,14 @@ MODALITY_INFO = {
         'expected_features': ['APOE4_status', 'genetic_risk_variants'],
         'clinical_relevance': 'high'
     },
-    'neuroimaging': {
-        'description': 'Medidas de neuroimagen estructural y funcional',
-        'expected_features': ['brain_volume', 'cortical_thickness', 'pet_uptake'],
+    'mri': {  # CAMBIO: neuroimaging -> mri
+        'description': 'Medidas de neuroimagen estructural (MRI)',
+        'expected_features': ['brain_volume', 'cortical_thickness', 'hippocampal_volume'],
+        'clinical_relevance': 'very_high'
+    },
+    'pet': {  # NUEVO: modalidad PET separada
+        'description': 'Medidas de neuroimagen funcional (PET)',
+        'expected_features': ['amyloid_uptake', 'tau_uptake', 'glucose_metabolism'],
         'clinical_relevance': 'very_high'
     },
     'biomarkers': {
@@ -122,6 +131,15 @@ def get_all_modalities() -> list:
         Lista con nombres de modalidades
     """
     return list(MODALITY_INFO.keys())
+
+def get_neuroimaging_modalities() -> list:
+    """
+    NUEVA FUNCIÓN: Obtener modalidades de neuroimagen específicamente
+    
+    Returns:
+        Lista con modalidades de neuroimagen ['mri', 'pet']
+    """
+    return ['mri', 'pet']
 
 def validate_config(config: dict) -> bool:
     """
@@ -184,6 +202,47 @@ def create_feature_summary(df, modality: str) -> dict:
     
     return summary
 
+def create_neuroimaging_combined_summary(mri_df=None, pet_df=None) -> dict:
+    """
+    NUEVA FUNCIÓN: Crear resumen combinado de modalidades de neuroimagen
+    
+    Args:
+        mri_df: DataFrame con features de MRI
+        pet_df: DataFrame con features de PET
+        
+    Returns:
+        Diccionario con resumen combinado
+    """
+    summary = {
+        'modalities_available': [],
+        'total_features': 0,
+        'complementary_coverage': 0.0
+    }
+    
+    if mri_df is not None and not mri_df.empty:
+        summary['modalities_available'].append('mri')
+        summary['total_features'] += len(mri_df.columns)
+        summary['mri_features'] = len(mri_df.columns)
+    
+    if pet_df is not None and not pet_df.empty:
+        summary['modalities_available'].append('pet')
+        summary['total_features'] += len(pet_df.columns)
+        summary['pet_features'] = len(pet_df.columns)
+    
+    # Calcular cobertura complementaria si ambas modalidades están disponibles
+    if len(summary['modalities_available']) == 2:
+        # Esto sería calculado con datos reales
+        summary['complementary_coverage'] = 0.85  # Placeholder
+        summary['neuroimaging_completeness'] = 'high'
+    elif len(summary['modalities_available']) == 1:
+        summary['complementary_coverage'] = 0.60
+        summary['neuroimaging_completeness'] = 'partial'
+    else:
+        summary['complementary_coverage'] = 0.0
+        summary['neuroimaging_completeness'] = 'none'
+    
+    return summary
+
 # Logging configuration para el módulo
 import logging
 
@@ -207,7 +266,8 @@ def setup_module_logging(log_level: str = 'INFO'):
     loggers = [
         'fe_demographics',
         'fe_genetics', 
-        'fe_neuroimaging',
+        'fe_mri',  # CAMBIO: fe_neuroimaging -> fe_mri
+        'fe_pet',  # NUEVO: logger para PET
         'fe_biomarkers',
         'fe_clinical',
         'fe_synthetic_activity_sleep',
@@ -237,7 +297,62 @@ BIOMARKER_REFERENCE_VALUES = {
     'ptau181_elevated': 23  # pg/mL
 }
 
-# Mensaje de inicialización
+# NUEVAS CONSTANTES: Referencias de neuroimagen
+MRI_REFERENCE_VALUES = {
+    'hippocampal_volume_atrophy': 0.15,  # Porcentaje de atrofia
+    'cortical_thickness_thinning': 0.10,  # mm de adelgazamiento
+    'ventricular_enlargement': 1.5  # Factor de agrandamiento
+}
+
+PET_REFERENCE_VALUES = {
+    'amyloid_suvr_positive': 1.11,  # SUVR cutoff para positividad amiloide
+    'tau_suvr_elevated': 1.25,     # SUVR cutoff para tau elevado
+    'fdg_hypometabolism': 0.85     # Ratio de hipometabolismo FDG
+}
+
+# NUEVA FUNCIÓN UTILITARIA: Validación de modalidades de neuroimagen
+def validate_neuroimaging_compatibility(mri_features: list = None, pet_features: list = None) -> dict:
+    """
+    Validar compatibilidad entre features de MRI y PET
+    
+    Args:
+        mri_features: Lista de features de MRI disponibles
+        pet_features: Lista de features de PET disponibles
+        
+    Returns:
+        Diccionario con información de compatibilidad
+    """
+    compatibility = {
+        'compatible': True,
+        'warnings': [],
+        'recommendations': []
+    }
+    
+    if mri_features is None and pet_features is None:
+        compatibility['compatible'] = False
+        compatibility['warnings'].append('No hay features de neuroimagen disponibles')
+        return compatibility
+    
+    if mri_features is not None and len(mri_features) < 3:
+        compatibility['warnings'].append('Pocas features de MRI disponibles (<3)')
+        compatibility['recommendations'].append('Considerar agregar más medidas estructurales')
+    
+    if pet_features is not None and len(pet_features) < 2:
+        compatibility['warnings'].append('Pocas features de PET disponibles (<2)')
+        compatibility['recommendations'].append('Considerar agregar más trazadores PET')
+    
+    # Verificar complementariedad
+    if mri_features and pet_features:
+        compatibility['recommendations'].append('Excelente: ambas modalidades disponibles para análisis multimodal')
+    elif mri_features and not pet_features:
+        compatibility['recommendations'].append('Considerar agregar PET para análisis funcional complementario')
+    elif pet_features and not mri_features:
+        compatibility['recommendations'].append('Considerar agregar MRI para contexto estructural')
+    
+    return compatibility
+
+# Mensaje de inicialización actualizado
 print(f"📦 Feature Engineering Module v{__version__} cargado exitosamente")
 print(f"🔬 Modalidades disponibles: {', '.join(get_all_modalities())}")
+print(f"🧠 Neuroimagen: {', '.join(get_neuroimaging_modalities())} (separadas para análisis especializado)")
 print(f"⚙️  Configuración por defecto aplicada")
