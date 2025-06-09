@@ -236,7 +236,3 @@ def engineer_pet_features(df):
     engineer = PETFeatureEngineer()
     return engineer.transform(df)
 
-if __name__ == "__main__":
-    # Test básico
-    print("🔬 Feature Engineering - PET")
-    print("Módulo listo para integración en pipeline principal")
