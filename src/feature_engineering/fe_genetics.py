@@ -17,7 +17,7 @@ class GeneticsFeatureEngineer:
         """
         Aplicar transformaciones de feature engineering para datos genéticos
         """
-        print("🧬 Procesando features genéticas...")
+        print("🧬genéticas...")
         df_transformed = df.copy()
         
         # 1. Procesar APOE (principal factor de riesgo genético)
