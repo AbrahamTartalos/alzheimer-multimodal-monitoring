@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV, cross_val_score
 import mlflow
 import mlflow.sklearn
-from .model_utils import evaluate_model, log_model_metrics, save_model_artifacts
+from model_utils import evaluate_model, log_model_metrics, save_model_artifacts  # Elimina el punto .
 import warnings
 warnings.filterwarnings('ignore')
 
