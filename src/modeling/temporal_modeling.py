@@ -415,25 +415,3 @@ TEMPORAL_CONFIGS = {
     }
 }
 
-if __name__ == "__main__":
-    # Ejemplo de uso
-    print("Temporal Modeling - Alzheimer Progression Analysis")
-    
-    try:
-        df = pd.read_csv('../../data/processed/integrated_features_final.csv')
-        
-        # Ejecutar análisis temporal
-        results = run_temporal_modeling(df)
-        
-        print("\n🎯 Resultados del Análisis Temporal:")
-        if results['evaluation']:
-            for model, metrics in results['evaluation'].items():
-                print(f"{model}: R² = {metrics['r2']:.3f}, RMSE = {metrics['rmse']:.3f}")
-        
-        if 'pattern_distribution' in results['patterns']:
-            print("\n📊 Distribución de Patrones:")
-            for pattern, count in results['patterns']['pattern_distribution'].items():
-                print(f"  {pattern}: {count}")
-                
-    except FileNotFoundError:
-        print("❌ Archivo de datos no encontrado")

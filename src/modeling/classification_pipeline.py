@@ -328,21 +328,3 @@ CLASSIFICATION_CONFIGS = {
     }
 }
 
-if __name__ == "__main__":
-    # Ejemplo de uso
-    print("Clasificación Pipeline - Alzheimer Risk Assessment")
-    
-    # Cargar datos (ejemplo)
-    try:
-        df = pd.read_csv('../../data/processed/integrated_features_final.csv')
-        
-        # Ejecutar pipeline
-        results = run_classification_analysis(df)
-        
-        print("\n🎯 Resultados del Pipeline:")
-        for model, metrics in results['results'].items():
-            print(f"{model}: F1-weighted = {metrics['f1_weighted']:.3f}")
-            
-    except FileNotFoundError:
-        print("❌ Archivo de datos no encontrado")
-        print("💡 Ejecutar desde el directorio correcto con datos disponibles")

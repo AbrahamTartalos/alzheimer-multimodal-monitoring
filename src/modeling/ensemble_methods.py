@@ -426,11 +426,3 @@ def ensemble_cross_validation(model: Any, X: np.ndarray, y: np.ndarray,
         print(f"Error en validación cruzada: {e}")
         return {}
 
-if __name__ == "__main__":
-    print("🎯 Ensemble Methods para Alzheimer - Listo para usar")
-    print("📊 Funciones principales disponibles:")
-    print("   • AlzheimerEnsemble: Ensemble principal")
-    print("   • StackingEnsemble: Implementación de stacking")
-    print("   • MultimodalEnsemble: Ensemble multimodal")
-    print("   • create_ensemble_pipeline: Pipeline completo")
-    print("   • log_ensemble_results: Logging en MLflow")

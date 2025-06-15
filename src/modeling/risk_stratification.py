@@ -6,7 +6,7 @@ Este módulo contiene algoritmos especializados para la estratificación de ries
 de pacientes con Alzheimer, incluyendo clustering, estratificación jerárquica
 y modelos probabilísticos.
 
-Autor: Proyecto Monitorización Multimodal Alzheimer
+Autor: Abraham Tartalos
 Fecha: 2025
 """
 
