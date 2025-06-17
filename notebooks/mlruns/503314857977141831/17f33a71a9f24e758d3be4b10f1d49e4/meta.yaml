@@ -1,0 +1,15 @@
+artifact_uri: file:///E:/usuarios/alumno/Escritorio/Alzheimer-Multimodal-Monitoring/notebooks/mlruns/503314857977141831/17f33a71a9f24e758d3be4b10f1d49e4/artifacts
+end_time: 1750099330689
+entry_point_name: ''
+experiment_id: '503314857977141831'
+lifecycle_stage: active
+run_id: 17f33a71a9f24e758d3be4b10f1d49e4
+run_name: regression_linear_regression
+run_uuid: 17f33a71a9f24e758d3be4b10f1d49e4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1750099270069
+status: 4
+tags: []
+user_id: alumno
