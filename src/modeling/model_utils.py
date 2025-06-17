@@ -119,6 +119,11 @@ def evaluate_model(model, X_test, y_test, model_type='regression'):
         if 'auc' in metrics:
             print(f"📊 AUC: {metrics['auc']:.4f}")
     
+    # Convertir arrays a escalares
+    for metric in metrics:
+        if isinstance(metrics[metric], np.ndarray):
+            metrics[metric] = float(metrics[metric].item())
+
     return metrics
 
 def log_model_metrics(metrics, model_name, model_type):
@@ -136,7 +141,17 @@ def log_model_metrics(metrics, model_name, model_type):
         mlflow.set_tag("timestamp", datetime.now().isoformat())
         
         for metric_name, value in metrics.items():
-            mlflow.log_metric(metric_name, value)
+            try:
+            # Convertir arrays de un solo elemento a float
+                if isinstance(value, np.ndarray) and value.size == 1:
+                    mlflow.log_metric(metric_name, float(value.item()))
+                elif isinstance(value, (np.generic, np.number)):
+                    mlflow.log_metric(metric_name, float(value))
+                else:
+                    mlflow.log_metric(metric_name, value)
+            except Exception as e:
+                print(f"⚠️ Error registrando {metric_name}={value}: {str(e)}")
+                continue
         
         print(f"✅ Métricas registradas en MLflow para {model_name}")
 

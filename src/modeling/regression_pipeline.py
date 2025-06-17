@@ -8,8 +8,10 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.svm import SVR
+from sklearn.neural_network import MLPRegressor
+from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
 import mlflow
 import mlflow.sklearn
 from model_utils import evaluate_model, log_model_metrics, save_model_artifacts  # Elimina el punto .
@@ -19,29 +21,46 @@ warnings.filterwarnings('ignore')
 class RegressionPipeline:
     """Pipeline para modelos de regresión del score de riesgo"""
     
-    def __init__(self, target_col='composite_risk_score'):
+    def __init__(self, target_col='composite_risk_score', test_size=0.2, random_state=42):
         self.target_col = target_col
+        self.test_size = test_size  # Nuevo parámetro
+        self.random_state = random_state  # Nuevo parámetro
         self.models = {}
         self.scalers = {}
         self.results = {}
+        self.trained_models = {}  # Inicializar para evitar errores posteriores
         
     def setup_models(self):
         """Configura modelos de regresión"""
         self.models = {
             'linear_regression': LinearRegression(),
-            'ridge': Ridge(random_state=42),
-            'lasso': Lasso(random_state=42),
-            'elastic_net': ElasticNet(random_state=42),
+            'ridge': Ridge(random_state=self.random_state),  # Usar atributo
+            'lasso': Lasso(random_state=self.random_state),  # Usar atributo
+            'elastic_net': ElasticNet(random_state=self.random_state),  # Usar atributo
             'random_forest': RandomForestRegressor(
-                n_estimators=100, random_state=42, n_jobs=-1
+                n_estimators=100, 
+                random_state=self.random_state,  # Usar atributo
+                n_jobs=-1
             ),
             'gradient_boosting': GradientBoostingRegressor(
-                n_estimators=100, random_state=42
+                n_estimators=100, random_state=self.random_state
             ),
-            'svr': SVR()
+            'svr': SVR(),
+            'xgboost': XGBRegressor(
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            random_state=self.random_state
+            ),
+            'neural_network': MLPRegressor(
+                hidden_layer_sizes=(100, 50),
+                max_iter=500,
+                learning_rate_init=0.001,
+                random_state=self.random_state
+            )
         }
         
-        print(f"🔧 Configurados {len(self.models)} modelos de regresión")
+        print(f" Configurados {len(self.models)} modelos de regresión")
     
     def get_hyperparameter_grids(self):
         """Define grids de hiperparámetros para optimización"""
@@ -118,6 +137,11 @@ class RegressionPipeline:
         
         # Evaluar modelo
         metrics = evaluate_model(model, X_test_scaled, y_test, 'regression')
+        # Asegurar que todas las métricas sean floats
+        for k in list(metrics.keys()):
+            if isinstance(metrics[k], np.ndarray):
+                metrics[k] = float(metrics[k].item())
+        
         self.results[model_name] = metrics
         
         return metrics
@@ -136,7 +160,7 @@ class RegressionPipeline:
         # Validación cruzada
         cv_scores = cross_val_score(
             model, X_scaled, y, cv=cv, 
-            scoring='neg_mean_squared_error', n_jobs=-1
+            scoring='neg_mean_squared_error', n_jobs=1
         )
         
         rmse_scores = np.sqrt(-cv_scores)
@@ -147,13 +171,12 @@ class RegressionPipeline:
             'cv_scores': rmse_scores
         }
     
-    def run_regression_pipeline(self, X_train, X_test, y_train, y_test, 
-                               optimize_hyperparams=False, cross_validate=True):
+    def run_regression_pipeline(self, X, y, optimize_hyperparams=False, cross_validate=True):
         """
         Ejecuta pipeline completo de regresión
         
         Args:
-            X_train, X_test, y_train, y_test: Datos de entrenamiento y test
+            X, y: Datos de features y target
             optimize_hyperparams: Si optimizar hiperparámetros
             cross_validate: Si realizar validación cruzada
         
@@ -163,13 +186,22 @@ class RegressionPipeline:
         if not self.models:
             self.setup_models()
         
+        # Dividir datos (¡NUEVO!)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, 
+            test_size=self.test_size, 
+            random_state=self.random_state
+        )
+
         print("\n🚀 INICIANDO PIPELINE DE REGRESIÓN")
         print("=" * 50)
+        print(f"   • Dimensiones entrenamiento: {X_train.shape}")
+        print(f"   • Dimensiones test: {X_test.shape}")
         
         trained_models = {}
         
         for model_name in self.models.keys():
-            print(f"\n🔄 Entrenando {model_name}...")
+            print(f"\n Entrenando {model_name}...")
             
             with mlflow.start_run(nested=True, run_name=f"regression_{model_name}"):
                 mlflow.set_tag("model_type", "regression")
