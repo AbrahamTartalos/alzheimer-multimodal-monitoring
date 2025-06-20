@@ -73,7 +73,7 @@ def prepare_features(df, target_col, test_size=0.2, random_state=42):
 
 def evaluate_model(model, X_test, y_test, model_type='regression'):
     """
-    Evalúa modelo y retorna métricas
+    Evalúa modelo y retorna métricas como floats
     
     Args:
         model: Modelo entrenado
@@ -88,29 +88,29 @@ def evaluate_model(model, X_test, y_test, model_type='regression'):
     metrics = {}
     
     if model_type == 'regression':
-        metrics['mse'] = mean_squared_error(y_test, y_pred)
-        metrics['rmse'] = np.sqrt(metrics['mse'])
-        metrics['mae'] = mean_absolute_error(y_test, y_pred)
-        metrics['r2'] = r2_score(y_test, y_pred)
+        # Calcular métricas clave como floats
+        metrics['rmse'] = float(np.sqrt(mean_squared_error(y_test, y_pred)))
+        metrics['mae'] = float(mean_absolute_error(y_test, y_pred))
+        metrics['r2_score'] = float(r2_score(y_test, y_pred))
         
         print(f"📊 RMSE: {metrics['rmse']:.4f}")
         print(f"📊 MAE: {metrics['mae']:.4f}")
-        print(f"📊 R²: {metrics['r2']:.4f}")
+        print(f"📊 R²: {metrics['r2_score']:.4f}")
         
     elif model_type == 'classification':
-        metrics['accuracy'] = accuracy_score(y_test, y_pred)
-        metrics['precision'] = precision_score(y_test, y_pred, average='weighted')
-        metrics['recall'] = recall_score(y_test, y_pred, average='weighted')
-        metrics['f1'] = f1_score(y_test, y_pred, average='weighted')
+        metrics['accuracy'] = float(accuracy_score(y_test, y_pred))
+        metrics['precision'] = float(precision_score(y_test, y_pred, average='weighted'))
+        metrics['recall'] = float(recall_score(y_test, y_pred, average='weighted'))
+        metrics['f1'] = float(f1_score(y_test, y_pred, average='weighted'))
         
         # AUC para clasificación binaria/multiclase
         try:
             if hasattr(model, 'predict_proba'):
                 y_proba = model.predict_proba(X_test)
                 if y_proba.shape[1] == 2:
-                    metrics['auc'] = roc_auc_score(y_test, y_proba[:, 1])
+                    metrics['auc'] = float(roc_auc_score(y_test, y_proba[:, 1]))
                 else:
-                    metrics['auc'] = roc_auc_score(y_test, y_proba, multi_class='ovr')
+                    metrics['auc'] = float(roc_auc_score(y_test, y_proba, multi_class='ovr'))
         except:
             pass
         
@@ -119,16 +119,33 @@ def evaluate_model(model, X_test, y_test, model_type='regression'):
         if 'auc' in metrics:
             print(f"📊 AUC: {metrics['auc']:.4f}")
     
-    # Convertir arrays a escalares
-    for metric in metrics:
-        if isinstance(metrics[metric], np.ndarray):
-            metrics[metric] = float(metrics[metric].item())
+    # Conversión adicional para garantizar que todo sea float
+    for metric in list(metrics.keys()):
+        value = metrics[metric]
+        
+        # Convertir arrays de tamaño 1 a float
+        if isinstance(value, np.ndarray) and value.size == 1:
+            metrics[metric] = float(value.item())
+        
+        # Convertir tipos numéricos de numpy a float de Python
+        elif isinstance(value, np.generic):
+            metrics[metric] = float(value)
+        
+        # Manejar casos inesperados
+        elif not isinstance(value, (int, float)):
+            print(f"⚠️ Advertencia: La métrica '{metric}' tiene tipo no numérico: {type(value)}")
+            # Intentar conversión forzada si es posible
+            try:
+                metrics[metric] = float(value)
+            except:
+                print(f"❌ No se pudo convertir '{metric}', eliminando del reporte")
+                del metrics[metric]
 
     return metrics
 
 def log_model_metrics(metrics, model_name, model_type):
     """
-    Registra métricas en MLflow
+    Registrar métricas en MLflow asegurando que sean escalares
     
     Args:
         metrics: Diccionario con métricas
@@ -142,16 +159,24 @@ def log_model_metrics(metrics, model_name, model_type):
         
         for metric_name, value in metrics.items():
             try:
-            # Convertir arrays de un solo elemento a float
-                if isinstance(value, np.ndarray) and value.size == 1:
-                    mlflow.log_metric(metric_name, float(value.item()))
-                elif isinstance(value, (np.generic, np.number)):
-                    mlflow.log_metric(metric_name, float(value))
-                else:
+                # Convertir cualquier tipo NumPy a float
+                if isinstance(value, (np.ndarray, np.generic)):
+                    if value.size == 1:
+                        value = float(value.item())
+                    else:
+                        # Si es un array, registrar solo el primer valor
+                        print(f"⚠️ Array detectado en {metric_name} - usando primer valor")
+                        value = float(value[0])
+            
+                # Registrar solo si es un número
+                if isinstance(value, (int, float)):
                     mlflow.log_metric(metric_name, value)
+                    print(f"   ✓ {metric_name}: {value}")
+                else:
+                    print(f"⚠️ Omitiendo {metric_name} - tipo no soportado: {type(value)}")
+                    
             except Exception as e:
-                print(f"⚠️ Error registrando {metric_name}={value}: {str(e)}")
-                continue
+                print(f"❌ Error registrando {metric_name}={value}: {str(e)}")
         
         print(f"✅ Métricas registradas en MLflow para {model_name}")
 
