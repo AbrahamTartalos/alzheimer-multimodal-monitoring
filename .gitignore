@@ -87,3 +87,6 @@ config/secrets.yaml
 .tmp/
 tmp/
 temp/
+
+# Carpeta de tracking de MLflow
+mlruns/
