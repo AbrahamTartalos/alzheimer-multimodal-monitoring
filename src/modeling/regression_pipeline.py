@@ -147,7 +147,7 @@ class RegressionPipeline:
         return metrics
     
     def cross_validate_model(self, model_name, X, y, cv=5):
-        """Validación cruzada para un modelo"""
+        """Validación cruzada para un modelo retornando floats"""
         model = self.models[model_name]
         
         # Escalar si es necesario
@@ -168,7 +168,7 @@ class RegressionPipeline:
         return {
             'cv_rmse_mean': rmse_scores.mean(),
             'cv_rmse_std': rmse_scores.std(),
-            'cv_scores': rmse_scores
+            # No retorna 'cv_scores': rmse_scores
         }
     
     def run_regression_pipeline(self, X, y, optimize_hyperparams=False, cross_validate=True):
@@ -226,6 +226,15 @@ class RegressionPipeline:
                     test_metrics.update(cv_results)
                     print(f"📊 CV RMSE: {cv_results['cv_rmse_mean']:.4f} ± {cv_results['cv_rmse_std']:.4f}")
                 
+                # Verificación de metricas
+                print(f"🔍 Verificación final de métricas para {model_name}:")
+                for k, v in test_metrics.items():
+                    if isinstance(v, np.ndarray):
+                        print(f"   - {k} es un array de tamaño {v.shape} - convirtiendo a float")
+                        test_metrics[k] = float(v[0])  # Tomar el primer valor si es array
+                    elif not isinstance(v, (int, float)):
+                        print(f"   - {k} tiene tipo no numérico: {type(v)}")
+
                 # Registrar en MLflow
                 log_model_metrics(test_metrics, model_name, "regression")
                 mlflow.sklearn.log_model(trained_model, f"model_{model_name}")
@@ -239,12 +248,12 @@ class RegressionPipeline:
         self.trained_models = trained_models
         return self.results
     
-    def get_best_model(self, metric='r2'):
+    def get_best_model(self, metric='r2_score'):
         """
         Obtiene el mejor modelo según métrica especificada
         
         Args:
-            metric: Métrica para comparar ('r2', 'rmse', 'mae')
+            metric: Métrica para comparar ('r2_score', 'rmse', 'mae')
         
         Returns:
             tuple: (nombre_modelo, modelo, métricas)
