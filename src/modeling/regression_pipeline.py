@@ -38,9 +38,10 @@ class RegressionPipeline:
             'lasso': Lasso(random_state=self.random_state),  # Usar atributo
             'elastic_net': ElasticNet(random_state=self.random_state),  # Usar atributo
             'random_forest': RandomForestRegressor(
-                n_estimators=100, 
+                n_estimators=100,
+                max_depth=8,            # Limitar profundidad
+                min_samples_leaf=5,      # Evitar sobreajuste 
                 random_state=self.random_state,  # Usar atributo
-                n_jobs=-1
             ),
             'gradient_boosting': GradientBoostingRegressor(
                 n_estimators=100, random_state=self.random_state
@@ -54,9 +55,12 @@ class RegressionPipeline:
             ),
             'neural_network': MLPRegressor(
                 hidden_layer_sizes=(100, 50),
-                max_iter=500,
+                max_iter=1000,
+                early_stopping=True,  # Detención temprana
                 learning_rate_init=0.001,
-                random_state=self.random_state
+                solver='adam',
+                random_state=self.random_state,
+                batch_size=256  # Mejorar estabilidad
             )
         }
         
@@ -104,7 +108,7 @@ class RegressionPipeline:
         model = self.models[model_name].copy() if hasattr(self.models[model_name], 'copy') else self.models[model_name]
         
         # Escalar datos si es necesario
-        if model_name in ['svr', 'ridge', 'lasso', 'elastic_net']:
+        if model_name in ['svr', 'ridge', 'lasso', 'elastic_net', 'neural_network']:
             scaler = StandardScaler()
             X_train_scaled = scaler.fit_transform(X_train)
             self.scalers[model_name] = scaler

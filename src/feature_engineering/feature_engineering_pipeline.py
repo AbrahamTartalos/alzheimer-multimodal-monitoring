@@ -403,8 +403,20 @@ def run_feature_engineering_pipeline(input_csv_path, output_csv_path=None):
     # Ejecutar pipeline
     pipeline = FeatureEngineeringPipeline()
     df_engineered = pipeline.run_pipeline(input_csv_path, output_csv_path)
-    
+    df_engineered = remove_data_leakage(df_engineered)
+
     return df_engineered
+
+# Remueve features que causan data leakage
+def remove_data_leakage(df, target_column='composite_risk_score'):
+    """Elimina variables que causan fuga de datos"""
+    leakage_features = [
+        'biomarker_risk_score', 
+        'APOE_risk_score',
+        'behavioral_risk_score',
+        target_column  # Por si acaso el target está en las features
+    ]
+    return df.drop(columns=leakage_features, errors='ignore')
 
 # Ejemplo de uso directo con rutas absolutas
 if __name__ == "__main__":
@@ -428,7 +440,7 @@ if __name__ == "__main__":
         'multimodal_alzheimer_features.csv'
     )
     
-    print(f"🔍 Buscando archivo en: {input_path}")
+    print(f" Buscando archivo en: {input_path}")
     
     # Verificar existencia
     if not os.path.exists(input_path):
@@ -442,10 +454,10 @@ if __name__ == "__main__":
     # Ejecutar pipeline
     try:
         df_features = run_feature_engineering_pipeline(input_path, output_path)
-        print(f"\n🎉 ¡Feature Engineering completado!")
-        print(f"📁 Archivo guardado: {output_path}")
-        print(f"📊 Dimensiones finales: {df_features.shape}")
+        print(f"\n ¡Feature Engineering completado!")
+        print(f" Archivo guardado: {output_path}")
+        print(f" Dimensiones finales: {df_features.shape}")
     except Exception as e:
-        print(f"\n🔥 ERROR en el pipeline: {str(e)}")
+        print(f"\n ERROR en el pipeline: {str(e)}")
         import traceback
         traceback.print_exc()
