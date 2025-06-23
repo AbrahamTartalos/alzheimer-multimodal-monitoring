@@ -20,7 +20,7 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
-def load_processed_data(file_path='../data/processed/features/alzheimer_features_selected_20250605.csv'):
+def load_processed_data(file_path='../data/processed/features/alzheimer_features_selected_20250621.csv'):
     """
     Carga datos procesados para modelado
     
