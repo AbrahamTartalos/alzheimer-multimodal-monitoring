@@ -383,6 +383,17 @@ class FeatureEngineeringPipeline:
         
         print(f"\n💾 Pipeline completado exitosamente!")
 
+# Remueve features que causan data leakage
+def remove_data_leakage(df, target_column='composite_risk_score'):
+    """Elimina variables que causan fuga de datos"""
+    leakage_features = [
+        'biomarker_risk_score', 
+        'APOE_risk_score',
+        'behavioral_risk_score',
+        target_column  # Por si acaso el target está en las features
+    ]
+    return df.drop(columns=leakage_features, errors='ignore')
+
 def run_feature_engineering_pipeline(input_csv_path, output_csv_path=None):
     """
     Función principal para ejecutar el pipeline completo
@@ -407,16 +418,6 @@ def run_feature_engineering_pipeline(input_csv_path, output_csv_path=None):
 
     return df_engineered
 
-# Remueve features que causan data leakage
-def remove_data_leakage(df, target_column='composite_risk_score'):
-    """Elimina variables que causan fuga de datos"""
-    leakage_features = [
-        'biomarker_risk_score', 
-        'APOE_risk_score',
-        'behavioral_risk_score',
-        target_column  # Por si acaso el target está en las features
-    ]
-    return df.drop(columns=leakage_features, errors='ignore')
 
 # Ejemplo de uso directo con rutas absolutas
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ from typing import Dict, List, Tuple, Optional
 import warnings
 warnings.filterwarnings('ignore')
 
-class AlzheimerClassificationPipeline:
+class ClassificationPipeline:
     """Pipeline completo para clasificación de riesgo de Alzheimer"""
     
     def __init__(self, random_state: int = 42):
@@ -48,9 +48,13 @@ class AlzheimerClassificationPipeline:
         # Remover filas con target nulo
         df_clean = df.dropna(subset=[target_col])
         
+        # Seleccionar features (excluir composite_risk_score para evitar data leakage)
+        exclude_cols = ['composite_risk_score', 'risk_category']
+        feature_cols = [col for col in df_clean.columns if col not in exclude_cols]
+
         # Separar features y target
-        X = df_clean.drop(columns=[target_col])
-        y = df_clean[target_col]
+        X = df_clean[feature_cols].copy()
+        y = df_clean[target_col].copy()
         
         # Codificar target si es categórico
         if y.dtype == 'object':
@@ -60,8 +64,30 @@ class AlzheimerClassificationPipeline:
         null_threshold = 0.5
         X = X.loc[:, X.isnull().mean() < null_threshold]
         
-        # Rellenar valores nulos con mediana
-        X = X.fillna(X.median())
+        # 1. Codificar variables categóricas
+        categorical_cols = X.select_dtypes(include=['object', 'category']).columns
+        label_encoders = {}
+        for col in categorical_cols:
+            le = LabelEncoder()
+            X[col] = le.fit_transform(X[col].astype(str))
+            label_encoders[col] = le
+        
+        # 2. Convertir fechas a numéricas
+        date_cols = X.select_dtypes(include=['datetime', 'datetimetz']).columns
+        for col in date_cols:
+            X[col] = pd.to_datetime(X[col]).astype('int64') / 10**9
+        
+        # 3. Remover columnas con demasiados nulos
+        null_threshold = 0.5
+        X = X.loc[:, X.isnull().mean() < null_threshold]
+        
+        # 4. Imputación diferenciada
+        for col in X.columns:
+            if pd.api.types.is_numeric_dtype(X[col]):
+                X[col].fillna(X[col].median(), inplace=True)
+            else:
+                if not X[col].empty:
+                    X[col].fillna(X[col].mode()[0], inplace=True)
         
         # División train/test estratificada
         X_train, X_test, y_train, y_test = train_test_split(
@@ -114,8 +140,6 @@ class AlzheimerClassificationPipeline:
         Returns:
             Diccionario con modelos entrenados
         """
-        # Estandarizar features
-        X_train_scaled = self.scaler.fit_transform(X_train)
         
         # Crear y entrenar modelos
         models = self.create_models()
@@ -311,7 +335,7 @@ def run_classification_analysis(df: pd.DataFrame, target_col: str = 'risk_catego
     Returns:
         Resultados del análisis
     """
-    pipeline = AlzheimerClassificationPipeline()
+    pipeline = ClassificationPipeline()
     return pipeline.run_pipeline(df, target_col)
 
 # Configuraciones específicas para diferentes tipos de clasificación
