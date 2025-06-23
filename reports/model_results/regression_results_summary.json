@@ -1,0 +1,10 @@
+{
+  "experiment_date": "2025-06-22 11:50:51",
+  "best_model": "XGBoost",
+  "best_r2_score": 0.9995051097977002,
+  "best_rmse": 0.0047284855431525595,
+  "best_mae": 0.002319944585647466,
+  "total_features": 166,
+  "training_samples": 38772,
+  "test_samples": 9694
+}
