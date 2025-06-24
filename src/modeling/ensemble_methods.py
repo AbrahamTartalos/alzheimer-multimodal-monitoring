@@ -16,7 +16,8 @@ from sklearn.ensemble import (
     VotingClassifier, VotingRegressor, 
     BaggingClassifier, BaggingRegressor,
     AdaBoostClassifier, AdaBoostRegressor,
-    GradientBoostingClassifier, GradientBoostingRegressor
+    GradientBoostingClassifier, GradientBoostingRegressor,
+    StackingClassifier
 )
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.metrics import mean_squared_error, accuracy_score, classification_report
@@ -114,6 +115,51 @@ class AlzheimerEnsemble:
                 random_state=self.random_state
             )
         return ensemble
+    
+    def create_custom_voting_ensemble(self, models: Dict[str, Any], voting: str = 'soft') -> VotingClassifier:
+        """
+        Crea un VotingClassifier con modelos personalizados.
+        
+        Args:
+            models: Diccionario de modelos {nombre: modelo}
+            voting: 'soft' para probabilidades, 'hard' para predicciones directas
+            
+        Returns:
+            VotingClassifier configurado
+        """
+        estimators = [(name, model) for name, model in models.items()]
+        return VotingClassifier(
+            estimators=estimators, 
+            voting=voting, 
+            n_jobs=-1,
+            verbose=1  # Para ver progreso
+        )
+
+    def create_custom_stacking_ensemble(self, models: Dict[str, Any], 
+                                    meta_model: Any = None,
+                                    cv: int = 3) -> StackingClassifier:
+        """Crea un StackingClassifier con modelos personalizados.
+        
+        Args:
+            models: Diccionario de modelos {nombre: modelo}
+            meta_model: Modelo para la capa final (si None, usa LogisticRegression)
+            cv: Número de folds para validación cruzada
+            
+        Returns:
+            StackingClassifier configurado
+        """
+        from sklearn.linear_model import LogisticRegression
+        
+        estimators = [(name, model) for name, model in models.items()]
+        final_estimator = meta_model if meta_model else LogisticRegression()
+        
+        return StackingClassifier(
+            estimators=estimators,
+            final_estimator=final_estimator,
+            cv=cv,
+            n_jobs=-1,
+            verbose=1
+        )
 
 class StackingEnsemble:
     """

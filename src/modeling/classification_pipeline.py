@@ -9,7 +9,7 @@ Incluye preprocesamiento, entrenamiento y evaluación de modelos.
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.preprocessing import StandardScaler, LabelEncoder, RobustScaler
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
@@ -77,14 +77,33 @@ class ClassificationPipeline:
         for col in date_cols:
             X[col] = pd.to_datetime(X[col]).astype('int64') / 10**9
         
-        # 3. Remover columnas con demasiados nulos
+        # 3. Convertir columnas de fecha a timestamps numéricos
+        date_cols = X.select_dtypes(include=['datetime', 'datetimetz']).columns
+        for col in date_cols:
+            # Convertir a nanosegundos y luego escalar
+            X[col] = (pd.to_datetime(X[col]).astype('int64') / 10**9).astype(np.float32)
+        
+        # 4. Convertir todo a float32 para evitar overflow
+        X = X.astype(np.float32)
+        
+        # 5. Reemplazar infinitos con NaN
+        X.replace([np.inf, -np.inf], np.nan, inplace=True)
+        
+        # 6. Remover columnas con demasiados nulos
         null_threshold = 0.5
         X = X.loc[:, X.isnull().mean() < null_threshold]
         
-        # 4. Imputación diferenciada
+        # 7. Imputación diferenciada
         for col in X.columns:
             if pd.api.types.is_numeric_dtype(X[col]):
-                X[col].fillna(X[col].median(), inplace=True)
+                # Para columnas numéricas: imputar con la mediana
+                median_val = X[col].median()
+                X[col].fillna(median_val, inplace=True)
+                
+                # Escalar valores extremos
+                q1 = X[col].quantile(0.05)
+                q3 = X[col].quantile(0.95)
+                X[col] = np.clip(X[col], q1, q3)
             else:
                 if not X[col].empty:
                     X[col].fillna(X[col].mode()[0], inplace=True)
@@ -94,7 +113,12 @@ class ClassificationPipeline:
             X, y, test_size=test_size, stratify=y, random_state=self.random_state
         )
         
-        return X_train, X_test, y_train, y_test
+        return (
+            X_train, 
+            X_test, 
+            pd.Series(y_train, name=target_col),  # Convertir a Series
+            pd.Series(y_test, name=target_col)    # Convertir a Series
+        )
     
     def create_models(self) -> Dict:
         """
@@ -106,24 +130,30 @@ class ClassificationPipeline:
         models = {
             'logistic_regression': LogisticRegression(
                 random_state=self.random_state,
-                max_iter=1000,
-                class_weight='balanced'
+                max_iter=500,  # Reducir iteraciones
+                solver='saga',  # Algoritmo más rápido
+                class_weight='balanced',
+                n_jobs=-1  # Usar todos los núcleos
             ),
             'random_forest': RandomForestClassifier(
                 n_estimators=100,
                 random_state=self.random_state,
                 class_weight='balanced',
-                max_depth=10
+                max_depth=10,
+                n_jobs=-1   # paralelizar
             ),
             'gradient_boosting': GradientBoostingClassifier(
-                n_estimators=100,
+                n_estimators=100,  # Reducir árboles
                 random_state=self.random_state,
-                max_depth=6
+                max_depth=4,  # Reducir profundidad
+                subsample=0.5  # Usar submuestras
             ),
             'svm': SVC(
                 random_state=self.random_state,
                 probability=True,
-                class_weight='balanced'
+                class_weight='balanced',
+                kernel='linear',  # Kernel más rápido
+                max_iter=500  # Límite de iteraciones
             )
         }
         
@@ -148,14 +178,28 @@ class ClassificationPipeline:
         for name, model in models.items():
             print(f"Entrenando {name}...")
             
+            # Manejo especial para SVM
+            if name == 'svm':
+                # Usar solo 10000 muestras para SVM
+                X_model, _, y_model, _ = train_test_split(
+                    X_train, y_train, 
+                    train_size=10000, 
+                    stratify=y_train, 
+                    random_state=self.random_state
+                )
+                print(f"   Usando subconjunto de {X_model.shape[0]} muestras para SVM")
+            else:
+                X_model, y_model = X_train, y_train
+
             # Crear pipeline
+            # Usar RobustScaler en lugar de StandardScaler
             pipeline = Pipeline([
-                ('scaler', StandardScaler()),
+                ('scaler', RobustScaler()), # Cambio clave aquí.
                 ('classifier', model)
             ])
             
             # Entrenar modelo
-            pipeline.fit(X_train, y_train)
+            pipeline.fit(X_model, y_model)
             trained_models[name] = pipeline
             
         self.models = trained_models
@@ -199,7 +243,7 @@ class ClassificationPipeline:
             
         return results
     
-    def cross_validate_models(self, X: np.ndarray, y: np.ndarray, cv: int = 5) -> Dict:
+    def cross_validate_models(self, X: np.ndarray, y: np.ndarray, cv: int = 3) -> Dict:
         """
         Validación cruzada de modelos
         
