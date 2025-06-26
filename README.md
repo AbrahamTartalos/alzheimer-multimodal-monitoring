@@ -12,46 +12,47 @@ Este proyecto desarrolla un sistema de detección temprana y monitoreo de Alzhei
 - Diseñar un dashboard interactivo para visualización de factores de riesgo
 - Validar el sistema con evaluación retrospectiva (>80% sensibilidad, >75% especificidad)
 
-## Estructura del proyecto
+## Estructura del Proyecto
+
+```plaintext
 Alzheimer-Multimodal-Monitoring/
-│── data/                     # Datos utilizados en el proyecto
-│   ├── raw/                  # Datos sin procesar (originales)
-│   │       ──ADNI/
-│   │	   │	│── images/                  # Imágenes DICOM o NIfTI
-│   │	   │		├── MRI/
-│   │	   │		├── PET/
-│   │	   │	│── biomarkers/              # Biomarcadores CSF y plasma
-│   │	   │	│── cognition/               # Evaluaciones cognitivas
-│   │	   │	│── genetics/                # Datos genéticos
-│   │	   │	│── clinical/                # Diagnóstico y datos clínicos
-│   │	   │	│── demographics/            # Datos demográficos# Datos originales de ADNI
-│   │      │
-│   │      ├── OASIS/            # Datos originales de OASIS
-│   │	   │	│── images/                  # Imágenes DICOM o NIfTI
-│   │	   │	│	├── MRI/
-│   │	   │	│	├── PET/
-│   │	   │	│── clinical/              # 
-│   │	   │	│── demographics/
-│   │      │
-│   │      ├── synthetic/        # Datos sintéticos originales
-│   ├── interim/              # Datos en transformación (limpieza, imputaciones, etc.)
-│   ├── processed/            # Datos finales listos para modelado
-│   ├── external/             # Datos de fuentes externas adicionales
 │
-│── src/                      # Código fuente del proyecto
-│   ├── data/                 # Scripts de carga y procesamiento de datos
-│   ├── features/             # Extracción y transformación de características
-│   ├── models/               # Modelos de machine learning
-│   ├── visualization/        # Scripts para visualización de datos
+├── data/                         # Datos utilizados en el proyecto
+│   ├── raw/                      # Datos sin procesar (originales)
+│   │   ├── ADNI/                 # Datos originales de ADNI
+│   │   │   ├── images/           # Imágenes DICOM o NIfTI
+│   │   │   │   ├── MRI/
+│   │   │   │   └── PET/
+│   │   │   ├── biomarkers/       # Biomarcadores CSF y plasma
+│   │   │   ├── genetics/         # Datos genéticos
+│   │   │   ├── clinical/         # Diagnóstico y datos clínicos
+│   │   │   └── demographics/     # Datos demográficos
+│   │   └── synthetic/            # Datos sintéticos originales
+│   ├── interim/                  # Datos en transformación (limpieza, imputaciones, etc.)
+│   ├── processed/                # Datos finales listos para modelado
+│   └── external/                 # Datos de fuentes externas adicionales
 │
-│── notebooks/                # Cuadernos Jupyter para exploración y análisis
-│── reports/                  # Informes generados
-│   ├── figures/              # Gráficos y visualizaciones generadas
+├── src/                          # Código fuente del proyecto
+│   ├── data/                     # Scripts de carga y procesamiento de datos
+│   ├── feature_engineering/      # Extracción y transformación de características
+│   ├── models/                   # Modelos de machine learning
+│   └── visualization/            # Scripts para visualización de datos
 │
-│── dashboard/                # Código y archivos relacionados con el dashboard
-│── README.md                 # Explicación del proyecto
-│── requirements.txt          # Librerías necesarias
-│── .gitignore                # Archivos a ignorar en Git
+├── models/                       # Modelos entrenados y resultados
+│
+├── docs/                         # Documentación del proyecto
+│
+├── notebooks/                    # Cuadernos Jupyter para exploración y análisis
+│
+├── reports/                      # Informes generados
+│   └── figures/                  # Gráficos y visualizaciones generadas
+│
+├── dashboard/                    # Código y archivos relacionados con el dashboard
+│
+├── README.md                     # Explicación del proyecto
+├── requirements.txt              # Librerías necesarias
+└── .gitignore                    # Archivos a ignorar en Git
+
 
 
 ## Datos
