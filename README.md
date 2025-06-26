@@ -52,7 +52,7 @@ Alzheimer-Multimodal-Monitoring/
 ├── README.md                     # Explicación del proyecto
 ├── requirements.txt              # Librerías necesarias
 └── .gitignore                    # Archivos a ignorar en Git
-
+```
 
 
 ## Datos
