@@ -1,0 +1,10 @@
+Metric,Value
+best_model,gradient_boosting
+best_f1_score,0.9994842168299243
+baseline_f1_score,0.9693125722263767
+improvement_percentage,3.11268474876453
+models_trained,4
+imbalance_ratio,6.215745856353591
+training_samples,48466
+features_used,184
+timestamp,2025-06-26 16:55:36
