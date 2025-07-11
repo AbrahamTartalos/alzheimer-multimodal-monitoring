@@ -11,23 +11,24 @@
 
 ## 📋 Tabla de Contenidos
 
-- [Descripción](#descripción)
-- [Objetivos](#objetivos)
-- [Características Principales](#características-principales)
-- [Arquitectura del Sistema](#arquitectura-del-sistema)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Tecnologías Utilizadas](#tecnologías-utilizadas)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [Fases del Proyecto](#fases-del-proyecto)
-- [Datos](#datos)
-- [Modelos Implementados](#modelos-implementados)
-- [Dashboard Interactivo](#dashboard-interactivo)
-- [Resultados](#resultados)
-- [Privacidad y Consideraciones Éticas](#privacidad-y-consideraciones-éticas)
-- [Contribuciones](#contribuciones)
-- [Sobre el Autor](#sobre-el-autor)
-- [Licencia](#licencia)
+- [Descripción](#-descripción)
+- [Objetivos](#-objetivos)
+- [Características Principales](#-características-principales)
+- [Arquitectura del Sistema](#️-arquitectura-del-sistema)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Tecnologías Utilizadas](#️-tecnologías-utilizadas)
+- [Instalación](#-instalación)
+- [Uso](#-uso)
+- [Fases del Proyecto](#-fases-del-proyecto)
+- [Datos](#-datos)
+- [Modelos Implementados](#-modelos-implementados)
+- [Dashboard Interactivo](#-dashboard-interactivo)
+- [Resultados](#-resultados)
+- [Privacidad y Consideraciones Éticas](#-privacidad-y-consideraciones-éticas)
+- [Contribuciones](#-contribuciones)
+- [Sobre el Autor](#-sobre-el-autor)
+- [Licencia](#-licencia)
+
 
 ## 🔍 Descripción
 
