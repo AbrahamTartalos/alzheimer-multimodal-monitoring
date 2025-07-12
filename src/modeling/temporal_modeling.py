@@ -12,6 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.impute import SimpleImputer
 import mlflow
 import mlflow.sklearn
 from typing import Dict, List, Tuple, Optional
@@ -45,7 +46,7 @@ class AlzheimerTemporalModeling:
         # Filtrar datos con información temporal válida
         temporal_data = df.dropna(subset=[subject_col, time_col, target_col]).copy()
         
-        # Convertir códigos de visita a valores numéricos
+        # Convertir tiempo a valores numéricos (meses)
         if temporal_data[time_col].dtype == 'object':
             # Mapear códigos comunes de ADNI
             visit_mapping = {
@@ -58,17 +59,22 @@ class AlzheimerTemporalModeling:
             temporal_data['time_numeric'] = temporal_data[time_col].map(visit_mapping)
             temporal_data = temporal_data.dropna(subset=['time_numeric'])
         else:
-            temporal_data['time_numeric'] = temporal_data[time_col]
+            # Si es numérico, convertir días a meses
+            temporal_data['time_numeric'] = temporal_data[time_col] / 30.0
         
         # Ordenar por sujeto y tiempo
         temporal_data = temporal_data.sort_values([subject_col, 'time_numeric'])
         
+        # Limpiar datos infinitos y Nan
+        temporal_data = temporal_data.replace([np.inf, -np.inf], np.nan)
+        temporal_data = temporal_data.dropna(subset=[subject_col, time_col, target_col])
+
         return temporal_data
     
     def create_progression_features(self, df: pd.DataFrame,
-                                  subject_col: str = 'PTID',
-                                  time_col: str = 'time_numeric',
-                                  target_col: str = 'composite_risk_score') -> pd.DataFrame:
+                              subject_col: str = 'PTID',
+                              time_col: str = 'time_numeric',
+                              target_col: str = 'composite_risk_score') -> pd.DataFrame:
         """
         Crea features de progresión temporal
         
@@ -98,32 +104,47 @@ class AlzheimerTemporalModeling:
             # Cambio desde baseline
             subject_data['change_from_baseline'] = subject_data[target_col] - baseline_value
             
-            # Tasa de cambio
+            # Tasa de cambio (evitar división por cero)
             time_diff = subject_data[time_col].diff()
             value_diff = subject_data[target_col].diff()
             subject_data['rate_of_change'] = value_diff / time_diff.replace(0, np.nan)
             
-            # Tendencia general (slope)
+            # Tendencia general (slope) con manejo de errores
             if len(subject_data) >= 3:
                 time_values = subject_data[time_col].values
                 target_values = subject_data[target_col].values
-                slope = np.polyfit(time_values, target_values, 1)[0]
-                subject_data['overall_slope'] = slope
+                
+                # Verificar que no haya NaN en los datos
+                if np.isnan(time_values).any() or np.isnan(target_values).any():
+                    subject_data['overall_slope'] = 0.0
+                else:
+                    try:
+                        slope = np.polyfit(time_values, target_values, 1)[0]
+                        subject_data['overall_slope'] = slope
+                    except:
+                        subject_data['overall_slope'] = 0.0
+            else:
+                subject_data['overall_slope'] = np.nan
             
             # Valor máximo y mínimo
             subject_data['max_value'] = subject_data[target_col].max()
             subject_data['min_value'] = subject_data[target_col].min()
             
-            # Variabilidad
-            subject_data['variability'] = subject_data[target_col].std()
+            # Variabilidad (omitir NaN)
+            subject_data['variability'] = subject_data[target_col].std(skipna=True)
             
             progression_data.append(subject_data)
         
-        return pd.concat(progression_data, ignore_index=True)
+        result_df = pd.concat(progression_data, ignore_index=True)
+        
+        # Reemplazar infinitos por NaN
+        result_df = result_df.replace([np.inf, -np.inf], np.nan)
+        
+        return result_df
     
     def fit_progression_models(self, df: pd.DataFrame,
-                             target_col: str = 'composite_risk_score',
-                             time_col: str = 'time_numeric') -> Dict:
+                         target_col: str = 'composite_risk_score',
+                         time_col: str = 'time_numeric') -> Tuple[Dict, list]:
         """
         Entrena modelos de progresión temporal
         
@@ -133,23 +154,52 @@ class AlzheimerTemporalModeling:
             time_col: Columna de tiempo
             
         Returns:
-            Diccionario con modelos entrenados
+            Tuple: 
+                - Diccionario con modelos entrenados
+                - Lista de características utilizadas
         """
         models = {}
         
         # Preparar features
         feature_cols = [col for col in df.columns 
-                       if col not in [target_col, 'PTID', 'VISCODE', time_col]]
+                    if col not in [target_col, 'PTID', 'VISCODE', time_col]]
         
         # Filtrar features numéricas
         numeric_cols = df[feature_cols].select_dtypes(include=[np.number]).columns.tolist()
         
         if len(numeric_cols) == 0:
             print("⚠️  No se encontraron features numéricas para modelado temporal")
-            return models
+            return models, []
         
-        X = df[numeric_cols + [time_col]].fillna(df[numeric_cols + [time_col]].median())
-        y = df[target_col].fillna(df[target_col].median())
+        # Crear X e y con copias para no modificar el DataFrame original
+        X = df[numeric_cols + [time_col]].copy()
+        y = df[target_col].copy()
+        
+        # 1. Manejo de valores faltantes en X
+        # Eliminar columnas que son completamente NaN
+        X = X.dropna(axis=1, how='all')
+        
+        # Guardar las características seleccionadas
+        selected_features = X.columns.tolist()
+        
+        # Imputar valores faltantes con la mediana
+        imputer = SimpleImputer(strategy='median')
+        X_imputed = imputer.fit_transform(X)
+        X = pd.DataFrame(X_imputed, columns=selected_features, index=X.index)
+        
+        # 2. Manejo de valores faltantes en y
+        y = y.fillna(y.median())
+        
+        # 3. Verificar que no queden valores NaN
+        if X.isnull().any().any() or y.isnull().any():
+            # Si aún hay NaN, eliminamos las filas problemáticas
+            valid_idx = X.index[X.isnull().sum(axis=1) == 0]
+            X = X.loc[valid_idx]
+            y = y.loc[valid_idx]
+        
+        if len(X) == 0:
+            print("⚠️  No hay datos suficientes después de limpiar NaN")
+            return models, []
         
         # Modelo lineal simple
         linear_model = LinearRegression()
@@ -165,7 +215,7 @@ class AlzheimerTemporalModeling:
         rf_model.fit(X, y)
         models['rf_progression'] = rf_model
         
-        return models
+        return models, selected_features
     
     def predict_future_risk(self, df: pd.DataFrame, 
                           model_name: str = 'rf_progression',
@@ -272,29 +322,41 @@ class AlzheimerTemporalModeling:
         
         return patterns
     
-    def evaluate_temporal_models(self, df: pd.DataFrame, target_col: str = 'composite_risk_score') -> Dict:
+    def evaluate_temporal_models(self, df: pd.DataFrame, 
+                           target_col: str = 'composite_risk_score',
+                           feature_list: list = None) -> Dict:
         """
         Evalúa modelos temporales
         
         Args:
             df: DataFrame con datos
             target_col: Variable objetivo
+            feature_list: Lista de características a usar
             
         Returns:
             Métricas de evaluación
         """
         results = {}
         
-        # Preparar datos para evaluación
-        feature_cols = [col for col in df.columns 
-                       if col not in [target_col, 'PTID', 'VISCODE']]
-        numeric_cols = df[feature_cols].select_dtypes(include=[np.number]).columns.tolist()
+        # Si no se proporciona lista de características, usar todas las numéricas
+        if feature_list is None:
+            feature_cols = [col for col in df.columns 
+                        if col not in [target_col, 'PTID', 'VISCODE']]
+            numeric_cols = df[feature_cols].select_dtypes(include=[np.number]).columns.tolist()
+            feature_list = numeric_cols
         
-        if len(numeric_cols) == 0:
+        if len(feature_list) == 0:
             return results
         
-        X = df[numeric_cols].fillna(df[numeric_cols].median())
-        y = df[target_col].fillna(df[target_col].median())
+        # Usar solo las características seleccionadas
+        X = df[feature_list].copy()
+        y = df[target_col].copy()
+        
+        # Imputar valores faltantes
+        imputer = SimpleImputer(strategy='median')
+        X_imputed = imputer.fit_transform(X)
+        X = pd.DataFrame(X_imputed, columns=feature_list, index=X.index)
+        y = y.fillna(y.median())
         
         # Evaluar cada modelo
         for name, model in self.models.items():
@@ -315,36 +377,58 @@ class AlzheimerTemporalModeling:
         
         return results
     
-    def run_temporal_analysis(self, df: pd.DataFrame) -> Dict:
+    def run_temporal_analysis(self, df: pd.DataFrame,
+                        subject_col: str = 'PTID',
+                        time_col: str = 'VISCODE',
+                        target_col: str = 'composite_risk_score') -> Dict:
         """
         Ejecuta análisis temporal completo
         
         Args:
             df: DataFrame con datos
+            subject_col: Columna de identificación de sujeto
+            time_col: Columna de tiempo/visita
+            target_col: Variable objetivo temporal
             
         Returns:
             Resultados del análisis temporal
         """
-        print("🚀 Iniciando análisis temporal...")
-        
+        print("Iniciando análisis temporal...")
+    
         # Preparar datos temporales
-        temporal_data = self.prepare_temporal_data(df)
-        print(f"📊 Datos temporales preparados: {len(temporal_data)} registros")
+        temporal_data = self.prepare_temporal_data(df, subject_col, time_col, target_col)
+        print(f" Datos temporales preparados: {len(temporal_data)} registros")
         
         # Crear features de progresión
-        progression_data = self.create_progression_features(temporal_data)
-        print(f"📈 Features de progresión creadas: {len(progression_data)} registros")
+        progression_data = self.create_progression_features(
+            temporal_data, 
+            subject_col=subject_col,
+            time_col='time_numeric',
+            target_col=target_col
+        )
+        print(f" Features de progresión creadas: {len(progression_data)} registros")
         
-        # Entrenar modelos
-        self.models = self.fit_progression_models(progression_data)
+        # Entrenar modelos y obtener características usadas
+        self.models, selected_features = self.fit_progression_models(progression_data, target_col, 'time_numeric')
         print(f"✅ {len(self.models)} modelos temporales entrenados")
         
-        # Evaluar modelos
-        evaluation_results = self.evaluate_temporal_models(progression_data)
-        print("📊 Evaluación de modelos completada")
+        # Guardar las características seleccionadas para uso futuro
+        self.selected_features = selected_features
+        
+        # Evaluar modelos usando las mismas características
+        evaluation_results = self.evaluate_temporal_models(
+            progression_data, 
+            target_col,
+            feature_list=selected_features
+        )
+        print(" Evaluación de modelos completada")
         
         # Analizar patrones de progresión
-        progression_patterns = self.analyze_progression_patterns(progression_data)
+        progression_patterns = self.analyze_progression_patterns(
+            progression_data,
+            subject_col=subject_col,
+            target_col=target_col
+        )
         print("🔍 Análisis de patrones completado")
         
         # Registrar en MLflow
@@ -355,8 +439,11 @@ class AlzheimerTemporalModeling:
             'progression_data': progression_data,
             'models': self.models,
             'evaluation': evaluation_results,
-            'patterns': progression_patterns
+            'patterns': progression_patterns,
+            'selected_features': selected_features  # Añadir esta línea
         }
+
+
     
     def log_temporal_results(self, evaluation_results: Dict, progression_patterns: Dict):
         """
@@ -366,40 +453,49 @@ class AlzheimerTemporalModeling:
             evaluation_results: Métricas de evaluación
             progression_patterns: Patrones de progresión
         """
-        with mlflow.start_run():
-            mlflow.set_tag("analysis_type", "temporal_modeling")
+        # Usar la run activa existente en lugar de iniciar una nueva
+        if not mlflow.active_run():
+            mlflow.start_run()
+        
+        # Registrar métricas de modelos
+        for model_name, metrics in evaluation_results.items():
+            for metric_name, value in metrics.items():
+                mlflow.log_metric(f"{model_name}_{metric_name}", value)
+        
+        # Registrar estadísticas de patrones
+        if 'pattern_distribution' in progression_patterns:
+            for pattern, count in progression_patterns['pattern_distribution'].items():
+                mlflow.log_metric(f"pattern_{pattern}_count", count)
+        
+        # Registrar mejor modelo
+        if evaluation_results:
+            best_model = min(evaluation_results.keys(), 
+                        key=lambda x: evaluation_results[x]['mse'])
+            mlflow.set_tag("best_temporal_model", best_model)
             
-            # Registrar métricas de modelos
-            for model_name, metrics in evaluation_results.items():
-                for metric_name, value in metrics.items():
-                    mlflow.log_metric(f"{model_name}_{metric_name}", value)
-            
-            # Registrar estadísticas de patrones
-            if 'pattern_distribution' in progression_patterns:
-                for pattern, count in progression_patterns['pattern_distribution'].items():
-                    mlflow.log_metric(f"pattern_{pattern}_count", count)
-            
-            # Registrar mejor modelo
-            if evaluation_results:
-                best_model = min(evaluation_results.keys(), 
-                               key=lambda x: evaluation_results[x]['mse'])
-                mlflow.set_tag("best_temporal_model", best_model)
-                
-                if best_model in self.models:
-                    mlflow.sklearn.log_model(self.models[best_model], "best_temporal_model")
+            if best_model in self.models:
+                mlflow.sklearn.log_model(self.models[best_model], "best_temporal_model")
 
-def run_temporal_modeling(df: pd.DataFrame) -> Dict:
+def run_temporal_modeling(df: pd.DataFrame, subject_col: str = 'PTID', time_col: str = 'VISCODE', target_col: str = 'composite_risk_score') -> Dict:
     """
     Función principal para modelado temporal
     
     Args:
         df: DataFrame con datos
+        subject_col: Columna de identificación de sujeto
+        time_col: Columna de tiempo/visita
+        target_col: Variable objetivo temporal
         
     Returns:
         Resultados del análisis temporal
     """
     temporal_analyzer = AlzheimerTemporalModeling()
-    return temporal_analyzer.run_temporal_analysis(df)
+    return temporal_analyzer.run_temporal_analysis(
+        df, 
+        subject_col=subject_col,
+        time_col=time_col,
+        target_col=target_col
+    )
 
 # Configuraciones para diferentes tipos de análisis temporal
 TEMPORAL_CONFIGS = {
