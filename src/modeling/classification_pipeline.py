@@ -1,3 +1,17 @@
+# Copyright 2025 Abraham Tartalos
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Classification Pipeline for Alzheimer Risk Categorization
 =========================================================
@@ -48,8 +62,18 @@ class ClassificationPipeline:
         # Remover filas con target nulo
         df_clean = df.dropna(subset=[target_col])
         
-        # Seleccionar features (excluir composite_risk_score para evitar data leakage)
-        exclude_cols = ['composite_risk_score', 'risk_category']
+        # Seleccionar features (excluir features con posible data leakage)
+        exclude_cols = [
+            'risk_category_num',
+            'composite_risk_score',
+            'diagnosis_code',
+            'CDRSB_percentile',
+            'CDRSB_LOG',
+            'demographic_risk_score',
+            'multimodal_risk_index',
+            'risk_category'
+        ]
+
         feature_cols = [col for col in df_clean.columns if col not in exclude_cols]
 
         # Separar features y target
