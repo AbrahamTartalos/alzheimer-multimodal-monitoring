@@ -1,0 +1,36 @@
+{
+  "priority_models": {
+    "regression": {
+      "model_name": "xgboost",
+      "current_metric": "cv_rmse_mean",
+      "current_value": 0.0003
+    },
+    "classification": {
+      "model_name": "ensemble_classification",
+      "current_metric": "stacking_f1_weighted",
+      "current_value": 0.9998
+    },
+    "temporal": {
+      "model_name": "temporal_exploration",
+      "current_metric": "age_risk_correlation",
+      "current_value": 0.1571
+    },
+    "stratification": {
+      "model_name": "biomarker_stratification",
+      "current_metric": "silhouette_score",
+      "current_value": 0.6484
+    }
+  },
+  "clinical_thresholds": {
+    "high_risk_score": 0.7,
+    "moderate_risk_score": 0.4,
+    "sensitivity_target": 0.85,
+    "specificity_minimum": 0.75
+  },
+  "evaluation_focus": [
+    "Calibraci\u00f3n de probabilidades",
+    "An\u00e1lisis de errores por subgrupo",
+    "Optimizaci\u00f3n de thresholds cl\u00ednicos",
+    "Validaci\u00f3n en cohortes cr\u00edticas"
+  ]
+}

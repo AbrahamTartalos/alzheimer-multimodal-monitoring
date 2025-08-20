@@ -1,0 +1,5 @@
+Task,Model,Priority,Optimization,Clinical_Focus
+Regresión,xgboost,ALTA,Calibrar thresholds para scores de riesgo clínico,Precisión en rangos de alto riesgo (>0.7)
+Clasificación,ensemble_classification,CRÍTICA,Optimizar threshold para maximizar sensibilidad,Detección temprana - minimizar falsos negativos
+Temporal,temporal_exploration,MEDIA,Validar estabilidad en ventanas temporales,Seguimiento longitudinal de pacientes
+Estratificación,biomarker_stratification,BAJA,Validar interpretabilidad clínica de clusters,Personalización de tratamiento por fenotipo

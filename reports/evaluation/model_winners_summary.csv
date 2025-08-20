@@ -1,0 +1,5 @@
+task,model,metric,value,clinical_relevance
+regression,xgboost,cv_rmse_mean,0.0003,Predicción precisa del score de riesgo continuo
+classification,ensemble_classification,stacking_f1_weighted,0.9998,Ensemble de modelos para clasificación de riesgo
+temporal,temporal_exploration,age_risk_correlation,0.1571,Seguimiento de evolución temporal del riesgo
+stratification,biomarker_stratification,silhouette_score,0.6484,Identificación de fenotipos de riesgo diferenciados
