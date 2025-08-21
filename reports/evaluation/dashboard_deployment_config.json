@@ -1,0 +1,96 @@
+{
+  "model_deployment": {
+    "classification": {
+      "model_name": "ensemble_classification",
+      "threshold": 0.41972918452882685,
+      "sensitivity": 0.85,
+      "specificity": 0.6185167016010347,
+      "clinical_interpretation": {
+        "high_risk_threshold": 0.7,
+        "action_required": "Derivaci\u00f3n inmediata a especialista",
+        "follow_up": "Evaluaci\u00f3n en 3-6 meses"
+      }
+    },
+    "regression": {
+      "model_name": "xgboost",
+      "mae_expected": 0.03917105037279439,
+      "r2_performance": 0.9462858204641575,
+      "calibration_ranges": [
+        {
+          "Risk_Range": "Bajo",
+          "N": "22501",
+          "True_Mean": 0.16851881817607692,
+          "Pred_Mean": 0.17013862422963386,
+          "MAE": 0.03824202130070204,
+          "Bias": 0.001619806053556946
+        },
+        {
+          "Risk_Range": "Moderado",
+          "N": "18564",
+          "True_Mean": 0.47787227146780703,
+          "Pred_Mean": 0.47759803200511863,
+          "MAE": 0.03997646987804149,
+          "Bias": -0.00027423946268830045
+        },
+        {
+          "Risk_Range": "Alto",
+          "N": "7401",
+          "True_Mean": 0.6929176409923007,
+          "Pred_Mean": 0.6929171113537803,
+          "MAE": 0.03997530323804812,
+          "Bias": -5.296385204521008e-07
+        }
+      ]
+    }
+  },
+  "clinical_alerts": {
+    "high_sensitivity_subgroups": [
+      "APOE_e4+",
+      "Elderly_75+",
+      "High_Biomarkers"
+    ],
+    "false_negative_risk": "543",
+    "monitoring_frequency": {
+      "high_risk": "3_months",
+      "moderate_risk": "6_months",
+      "low_risk": "12_months"
+    }
+  },
+  "performance_monitoring": {
+    "key_metrics": [
+      "sensitivity",
+      "specificity",
+      "ppv",
+      "npv"
+    ],
+    "alert_thresholds": {
+      "sensitivity_min": 0.8,
+      "specificity_min": 0.65,
+      "npv_min": 0.9
+    },
+    "subgroup_validation": [
+      {
+        "Subgroup": "APOE_e4+",
+        "N": 21146,
+        "Prevalence": 0.17119076893975219,
+        "AUC": 0.7012499976357146,
+        "Sensitivity": 0.85,
+        "Specificity": 0.37624101335159194,
+        "PPV": 0.21964451424084516,
+        "NPV": 0.9239176124422026,
+        "False_Negatives": "543"
+      },
+      {
+        "Subgroup": "Elderly_75+",
+        "N": 15334,
+        "Prevalence": 0.11060388678753098,
+        "AUC": 0.8037261747143801,
+        "Sensitivity": 0.8372641509433962,
+        "Specificity": 0.5924622378647896,
+        "PPV": 0.20349670392662655,
+        "NPV": 0.9669698420296793,
+        "False_Negatives": "276"
+      }
+    ]
+  }
+}

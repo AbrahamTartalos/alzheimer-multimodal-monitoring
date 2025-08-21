@@ -1,0 +1,90 @@
+{
+  "model_endpoints": {
+    "classification_model": {
+      "name": "ensemble_classification",
+      "threshold": 0.41972918452882685,
+      "input_features": 189,
+      "output_format": "probability_and_category",
+      "performance": {
+        "sensitivity": 0.85,
+        "specificity": 0.6185167016010347,
+        "auc": 0.8220174788465769
+      }
+    },
+    "regression_model": {
+      "name": "xgboost",
+      "output_range": [
+        0.0,
+        1.0
+      ],
+      "interpretation_thresholds": {
+        "low_risk": 0.3,
+        "moderate_risk": 0.6,
+        "high_risk": 0.7
+      },
+      "performance": {
+        "mae": 0.03917105037279439,
+        "r2": 0.9462858204641575
+      }
+    }
+  },
+  "dashboard_components": {
+    "risk_assessment_panel": {
+      "primary_score": "continuous_risk_score",
+      "secondary_category": "risk_category",
+      "key_features": [
+        "biomarker_risk_score",
+        "APOE_e4_present",
+        "age",
+        "cognitive_score"
+      ],
+      "alerts": [
+        "high_risk_detected",
+        "subgroup_risk",
+        "follow_up_needed"
+      ]
+    },
+    "monitoring_panel": {
+      "performance_metrics": [
+        "sensitivity",
+        "specificity",
+        "ppv",
+        "npv"
+      ],
+      "subgroup_tracking": [
+        "APOE_e4+",
+        "Elderly_75+"
+      ],
+      "temporal_trends": [
+        "monthly_predictions",
+        "threshold_stability",
+        "calibration_drift"
+      ]
+    },
+    "clinical_decision_support": {
+      "recommendations": {
+        "high_risk": "Derivaci\u00f3n inmediata a neurolog\u00eda",
+        "moderate_risk": "Seguimiento en 6 meses + biomarcadores",
+        "low_risk": "Seguimiento rutinario anual"
+      },
+      "explanations": "feature_importance_top_5",
+      "confidence_intervals": true
+    }
+  },
+  "data_requirements": {
+    "input_file": "../data/processed/features/alzheimer_features_selected_20250621.csv",
+    "feature_count": 189,
+    "preprocessing_pipeline": "sklearn_pipeline_saved",
+    "real_time_features": [
+      "cognitive_score",
+      "lifestyle_factors",
+      "biomarkers"
+    ]
+  },
+  "deployment_settings": {
+    "update_frequency": "monthly",
+    "model_retraining_trigger": "performance_degradation",
+    "backup_threshold": 0.75,
+    "logging_level": "detailed"
+  }
+}

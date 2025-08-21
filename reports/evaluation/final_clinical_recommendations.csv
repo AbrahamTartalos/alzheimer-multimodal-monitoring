@@ -1,0 +1,5 @@
+Category,Recommendation,Rationale,Clinical_Impact,Implementation
+Threshold_Optimization,Usar threshold 0.420 para clasificación,Maximiza sensibilidad (0.850) manteniendo especificidad aceptable,Reducción de falsos negativos en detección temprana,Configurar alerta automática en dashboard
+Subgroup_Monitoring,Monitoreo intensivo en Elderly_75+,Sensibilidad reducida (0.837) en subgrupo crítico,Prevención de diagnósticos tardíos en población vulnerable,Dashboard específico para subgrupos de riesgo
+Score_Calibration,Ajustar interpretación de scores por rango de riesgo,Diferentes niveles de precisión según rango de riesgo,Mejora en precisión de predicciones clínicas,Mostrar intervalos de confianza en dashboard
+Follow_up_Protocol,Protocolo diferenciado por nivel de riesgo,Optimizar recursos clínicos según probabilidad de progresión,Detección temprana manteniendo eficiencia,Sistema de alertas automáticas por timeline

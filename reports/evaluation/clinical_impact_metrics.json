@@ -1,0 +1,19 @@
+{
+  "Population_Statistics": {
+    "total_population": 48466,
+    "high_risk_prevalence": "7.5%",
+    "cases_detected_early": 3077,
+    "cases_missed": 543
+  },
+  "Clinical_Benefits": {
+    "early_detection_rate": "85.0%",
+    "estimated_life_years_gained": "7692 a\u00f1os",
+    "prevention_rate": "85.0%"
+  },
+  "Economic_Impact": {
+    "false_positive_cost_usd": "$25,662,000",
+    "false_negative_cost_usd": "$4,344,000",
+    "cost_ratio_fp_fn": "5.91",
+    "net_cost_per_case_detected": "$9752"
+  }
+}
