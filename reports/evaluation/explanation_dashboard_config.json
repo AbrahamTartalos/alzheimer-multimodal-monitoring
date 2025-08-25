@@ -1,0 +1,357 @@
+{
+  "feature_importance": {
+    "global_top_features": [
+      {
+        "feature": "APOE_e4_present",
+        "importance_classification": 0.0,
+        "importance_regression": 0.7205892258559491,
+        "importance_avg": 0.36029461292797454
+      },
+      {
+        "feature": "APOE_e4_carrier",
+        "importance_classification": 0.003506236256961713,
+        "importance_regression": 0.16871353130911937,
+        "importance_avg": 0.08610988378304055
+      },
+      {
+        "feature": "DAYS_SINCE_BASELINE_years",
+        "importance_classification": 0.053644965894425266,
+        "importance_regression": 0.0,
+        "importance_avg": 0.026822482947212633
+      },
+      {
+        "feature": "AGE_standardized",
+        "importance_classification": 0.0028797785416198166,
+        "importance_regression": 0.03529901857002016,
+        "importance_avg": 0.019089398555819988
+      },
+      {
+        "feature": "APOE_e4_homozygous",
+        "importance_classification": 0.0,
+        "importance_regression": 0.03618788780431594,
+        "importance_avg": 0.01809394390215797
+      },
+      {
+        "feature": "AGE_risk_category",
+        "importance_classification": 0.0012240197150139493,
+        "importance_regression": 0.028787357692077617,
+        "importance_avg": 0.015005688703545784
+      },
+      {
+        "feature": "activity_variability",
+        "importance_classification": 0.028213278906457202,
+        "importance_regression": 0.0,
+        "importance_avg": 0.014106639453228601
+      },
+      {
+        "feature": "RID",
+        "importance_classification": 0.028050663589192774,
+        "importance_regression": 0.0,
+        "importance_avg": 0.014025331794596387
+      },
+      {
+        "feature": "TAU",
+        "importance_classification": 0.02532907888839971,
+        "importance_regression": 0.0,
+        "importance_avg": 0.012664539444199855
+      },
+      {
+        "feature": "activity_minutes_max",
+        "importance_classification": 0.024187213560098196,
+        "importance_regression": 0.0,
+        "importance_avg": 0.012093606780049098
+      },
+      {
+        "feature": "activity_minutes_min",
+        "importance_classification": 0.02382914224711946,
+        "importance_regression": 0.0,
+        "importance_avg": 0.01191457112355973
+      },
+      {
+        "feature": "PTAU_TAU_RATIO",
+        "importance_classification": 0.023709261690423835,
+        "importance_regression": 0.0,
+        "importance_avg": 0.011854630845211917
+      },
+      {
+        "feature": "CDRSB",
+        "importance_classification": 0.02222670648083528,
+        "importance_regression": 0.0,
+        "importance_avg": 0.01111335324041764
+      },
+      {
+        "feature": "ABETA40",
+        "importance_classification": 0.021663813441113476,
+        "importance_regression": 0.0,
+        "importance_avg": 0.010831906720556738
+      },
+      {
+        "feature": "steps_std",
+        "importance_classification": 0.021222595023619405,
+        "importance_regression": 0.0,
+        "importance_avg": 0.010611297511809703
+      }
+    ],
+    "feature_groups": {
+      "Biomarcadores": {
+        "importance": 0.522371900055449,
+        "n_features": 16,
+        "top_feature": "APOE_e4_present"
+      },
+      "Cognitivos": {
+        "importance": 0.004806531971999447,
+        "n_features": 1,
+        "top_feature": "CDMEMORY"
+      },
+      "Demogr\u00e1ficos": {
+        "importance": 0.06987575202046623,
+        "n_features": 21,
+        "top_feature": "AGE_standardized"
+      },
+      "Lifestyle": {
+        "importance": 0.0407926087180024,
+        "n_features": 16,
+        "top_feature": "sleep_minutes_mean"
+      },
+      "Cl\u00ednicos": {
+        "importance": 0.011179634520322102,
+        "n_features": 3,
+        "top_feature": "subject_id_clinical"
+      },
+      "Interacciones": {
+        "importance": 0.004341711184206599,
+        "n_features": 2,
+        "top_feature": "age_gender_interaction"
+      },
+      "Derivados": {
+        "importance": 0.1321171332033465,
+        "n_features": 30,
+        "top_feature": "PTAU_TAU_RATIO"
+      }
+    },
+    "clinical_interpretations": {
+      "APOE_e4_present": {
+        "clinical_meaning": "Factor gen\u00e9tico de susceptibilidad",
+        "impact_level": "CR\u00cdTICO",
+        "clinical_action": "Asesoramiento gen\u00e9tico y seguimiento intensivo",
+        "interpretation": "Presencia del alelo \u03b54 aumenta significativamente el riesgo"
+      },
+      "APOE_e4_carrier": {
+        "clinical_meaning": "Factor gen\u00e9tico de susceptibilidad",
+        "impact_level": "ALTO",
+        "clinical_action": "Asesoramiento gen\u00e9tico y seguimiento intensivo",
+        "interpretation": "Presencia del alelo \u03b54 aumenta significativamente el riesgo"
+      },
+      "DAYS_SINCE_BASELINE_years": {
+        "clinical_meaning": "Factor predictivo identificado por el modelo",
+        "impact_level": "MODERADO",
+        "clinical_action": "Evaluaci\u00f3n cl\u00ednica adicional requerida",
+        "interpretation": "Contribuye significativamente a la predicci\u00f3n de riesgo"
+      },
+      "AGE_standardized": {
+        "clinical_meaning": "Factor de riesgo demogr\u00e1fico no modificable",
+        "impact_level": "MODERADO",
+        "clinical_action": "Ajustar umbral de screening por edad",
+        "interpretation": "Edad avanzada es el principal factor de riesgo"
+      },
+      "APOE_e4_homozygous": {
+        "clinical_meaning": "Factor gen\u00e9tico de susceptibilidad",
+        "impact_level": "ALTO",
+        "clinical_action": "Asesoramiento gen\u00e9tico y seguimiento intensivo",
+        "interpretation": "Presencia del alelo \u03b54 aumenta significativamente el riesgo"
+      },
+      "AGE_risk_category": {
+        "clinical_meaning": "Factor de riesgo demogr\u00e1fico no modificable",
+        "impact_level": "MODERADO",
+        "clinical_action": "Ajustar umbral de screening por edad",
+        "interpretation": "Edad avanzada es el principal factor de riesgo"
+      },
+      "activity_variability": {
+        "clinical_meaning": "Factor predictivo identificado por el modelo",
+        "impact_level": "MODERADO",
+        "clinical_action": "Evaluaci\u00f3n cl\u00ednica adicional requerida",
+        "interpretation": "Contribuye significativamente a la predicci\u00f3n de riesgo"
+      },
+      "RID": {
+        "clinical_meaning": "Factor predictivo identificado por el modelo",
+        "impact_level": "MODERADO",
+        "clinical_action": "Evaluaci\u00f3n cl\u00ednica adicional requerida",
+        "interpretation": "Contribuye significativamente a la predicci\u00f3n de riesgo"
+      },
+      "TAU": {
+        "clinical_meaning": "Factor predictivo identificado por el modelo",
+        "impact_level": "MODERADO",
+        "clinical_action": "Evaluaci\u00f3n cl\u00ednica adicional requerida",
+        "interpretation": "Contribuye significativamente a la predicci\u00f3n de riesgo"
+      },
+      "activity_minutes_max": {
+        "clinical_meaning": "Factor predictivo identificado por el modelo",
+        "impact_level": "MODERADO",
+        "clinical_action": "Evaluaci\u00f3n cl\u00ednica adicional requerida",
+        "interpretation": "Contribuye significativamente a la predicci\u00f3n de riesgo"
+      }
+    }
+  },
+  "dashboard_components": {
+    "explanation_panel": {
+      "show_top_n_features": 10,
+      "feature_importance_chart": true,
+      "clinical_interpretations": true,
+      "group_analysis": true
+    },
+    "case_explanation": {
+      "show_contributing_factors": true,
+      "n_top_contributors": 5,
+      "include_confidence_intervals": true,
+      "clinical_recommendations": true
+    },
+    "population_insights": {
+      "feature_distributions": true,
+      "subgroup_analysis": true,
+      "model_performance_by_feature": true
+    }
+  },
+  "explanation_templates": {
+    "high_risk_explanation": "Basado en el an\u00e1lisis de {n_features} caracter\u00edsticas cl\u00ednicas, este paciente presenta un riesgo elevado de desarrollar Alzheimer. Los factores m\u00e1s influyentes incluyen: {top_factors}. Se recomienda derivaci\u00f3n inmediata a neurolog\u00eda especializada.",
+    "moderate_risk_explanation": "El an\u00e1lisis indica un riesgo moderado. Los principales factores contributivos son: {top_factors}. Se recomienda seguimiento cada 6 meses y evaluaci\u00f3n de biomarcadores adicionales.",
+    "low_risk_explanation": "El perfil del paciente sugiere un riesgo bajo actualmente. Factores protectivos identificados: {protective_factors}. Continuar con seguimiento rutinario anual."
+  },
+  "example_cases": [
+    {
+      "case_id": "HIGH_RISK_1",
+      "risk_category": "High",
+      "risk_score": 0.7857139436830773,
+      "key_contributors": [
+        {
+          "feature": "APOE_e4_present",
+          "value": 1.0,
+          "importance": 0.36029461292797454,
+          "contribution_score": 0.36029461292797454
+        },
+        {
+          "feature": "APOE_e4_carrier",
+          "value": 1,
+          "importance": 0.08610988378304055,
+          "contribution_score": 0.08610988378304055
+        },
+        {
+          "feature": "DAYS_SINCE_BASELINE_years",
+          "value": 1.0349075975359343,
+          "importance": 0.026822482947212633,
+          "contribution_score": 0.02775879138684839
+        }
+      ],
+      "clinical_summary": "Paciente de alto riesgo - Derivaci\u00f3n inmediata recomendada"
+    },
+    {
+      "case_id": "HIGH_RISK_2",
+      "risk_category": "High",
+      "risk_score": 0.7857139674925813,
+      "key_contributors": [
+        {
+          "feature": "APOE_e4_present",
+          "value": 1.0,
+          "importance": 0.36029461292797454,
+          "contribution_score": 0.36029461292797454
+        },
+        {
+          "feature": "APOE_e4_carrier",
+          "value": 1,
+          "importance": 0.08610988378304055,
+          "contribution_score": 0.08610988378304055
+        },
+        {
+          "feature": "AGE_standardized",
+          "value": 1.9059119771553288,
+          "importance": 0.019089398555819988,
+          "contribution_score": 0.03638271334422895
+        }
+      ],
+      "clinical_summary": "Paciente de alto riesgo - Derivaci\u00f3n inmediata recomendada"
+    },
+    {
+      "case_id": "HIGH_RISK_3",
+      "risk_category": "High",
+      "risk_score": 0.714285372254506,
+      "key_contributors": [
+        {
+          "feature": "APOE_e4_present",
+          "value": 1.0,
+          "importance": 0.36029461292797454,
+          "contribution_score": 0.36029461292797454
+        },
+        {
+          "feature": "DAYS_SINCE_BASELINE_years",
+          "value": 4.161533196440794,
+          "importance": 0.026822482947212633,
+          "contribution_score": 0.11162265319579247
+        },
+        {
+          "feature": "APOE_e4_carrier",
+          "value": 1,
+          "importance": 0.08610988378304055,
+          "contribution_score": 0.08610988378304055
+        }
+      ],
+      "clinical_summary": "Paciente de alto riesgo - Derivaci\u00f3n inmediata recomendada"
+    },
+    {
+      "case_id": "MODERATE_RISK_4",
+      "risk_category": "Moderate",
+      "risk_score": 0.5059979727857202,
+      "key_contributors": [
+        {
+          "feature": "DAYS_SINCE_BASELINE_years",
+          "value": 4.095824777549623,
+          "importance": 0.026822482947212633,
+          "contribution_score": 0.10986019025059575
+        },
+        {
+          "feature": "APOE_e4_carrier",
+          "value": 1,
+          "importance": 0.08610988378304055,
+          "contribution_score": 0.08610988378304055
+        },
+        {
+          "feature": "AGE_standardized",
+          "value": 1.6419915429293883,
+          "importance": 0.019089398555819988,
+          "contribution_score": 0.0313446309882649
+        }
+      ],
+      "clinical_summary": "Paciente de riesgo moderado - Seguimiento en 6 meses"
+    },
+    {
+      "case_id": "MODERATE_RISK_5",
+      "risk_category": "Moderate",
+      "risk_score": 0.4345694727856845,
+      "key_contributors": [
+        {
+          "feature": "DAYS_SINCE_BASELINE_years",
+          "value": 10.71047227926078,
+          "importance": 0.026822482947212633,
+          "contribution_score": 0.2872814600670659
+        },
+        {
+          "feature": "APOE_e4_carrier",
+          "value": 1,
+          "importance": 0.08610988378304055,
+          "contribution_score": 0.08610988378304055
+        },
+        {
+          "feature": "AGE_standardized",
+          "value": 2.3017926284942387,
+          "importance": 0.019089398555819988,
+          "contribution_score": 0.043939836878175015
+        }
+      ],
+      "clinical_summary": "Paciente de riesgo moderado - Seguimiento en 6 meses"
+    }
+  ],
+  "model_metadata": {
+    "total_features_analyzed": 143,
+    "top_feature_coverage": 0.5783061282918255,
+    "explanation_confidence": 0.85,
+    "last_updated": "2025-08-24 11:01:36"
+  }
+}
