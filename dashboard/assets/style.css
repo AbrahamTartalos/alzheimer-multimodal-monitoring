@@ -1,0 +1,569 @@
+/* ==========================================
+   ESTILOS PERSONALIZADOS PARA DASHBOARD ALZHEIMER
+   Proyecto: Monitorización y Predicción Multimodal de Alzheimer - Fase 6
+   ========================================== */
+
+/* Fuentes personalizadas */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Variables CSS para consistencia */
+:root {
+  --color-low-risk: #10B981;
+  --color-moderate-risk: #F59E0B;
+  --color-high-risk: #EF4444;
+  --color-info: #3B82F6;
+  --color-secondary: #6B7280;
+  --color-background: #F9FAFB;
+  --color-card: #FFFFFF;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --transition: all 0.2s ease;
+}
+
+/* Reset básico y tipografía */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family) !important;
+  line-height: 1.6 !important;
+  color: #1F2937 !important;
+  background-color: var(--color-background) !important;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family) !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Estilos para tabs principales */
+.tab-style {
+  border: none !important;
+  border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+  background-color: #F3F4F6 !important;
+  color: var(--color-secondary) !important;
+  font-weight: 600 !important;
+  padding: 12px 24px !important;
+  margin-right: 4px !important;
+  transition: var(--transition) !important;
+  cursor: pointer !important;
+  position: relative !important;
+}
+
+.tab-style:hover {
+  background-color: #E5E7EB !important;
+  color: #374151 !important;
+  transform: translateY(-1px) !important;
+}
+
+.tab-selected {
+  background-color: var(--color-info) !important;
+  color: white !important;
+  border-bottom: 3px solid #1D4ED8 !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.tab-selected::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #1D4ED8, transparent);
+  border-radius: 2px;
+}
+
+/* Cards y contenedores */
+.dashboard-card {
+  background-color: var(--color-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  padding: 1.5rem;
+  transition: var(--transition);
+  border: 1px solid #E5E7EB;
+}
+
+.dashboard-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* Indicadores de riesgo */
+.risk-indicator {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-align: center;
+  transition: var(--transition);
+}
+
+.risk-low {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--color-low-risk);
+  border: 2px solid var(--color-low-risk);
+}
+
+.risk-moderate {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--color-moderate-risk);
+  border: 2px solid var(--color-moderate-risk);
+}
+
+.risk-high {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--color-high-risk);
+  border: 2px solid var(--color-high-risk);
+}
+
+/* Formularios y inputs */
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #D1D5DB;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  transition: var(--transition);
+  background-color: white;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-info);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Botones personalizados */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-info), #1D4ED8);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #1D4ED8, #1E40AF);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+/* Alertas y notificaciones */
+.alert {
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  border-left: 4px solid;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.alert-info {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-left-color: var(--color-info);
+  color: #1E40AF;
+}
+
+.alert-success {
+  background-color: rgba(16, 185, 129, 0.05);
+  border-left-color: var(--color-low-risk);
+  color: #047857;
+}
+
+.alert-warning {
+  background-color: rgba(245, 158, 11, 0.05);
+  border-left-color: var(--color-moderate-risk);
+  color: #92400E;
+}
+
+.alert-error {
+  background-color: rgba(239, 68, 68, 0.05);
+  border-left-color: var(--color-high-risk);
+  color: #991B1B;
+}
+
+/* Iconos y elementos visuales */
+.icon-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--color-info);
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+/* Tooltips personalizados */
+.tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1F2937;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition);
+  z-index: 1000;
+}
+
+.tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 115%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1F2937;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition);
+  z-index: 1000;
+}
+
+.tooltip:hover::after,
+.tooltip:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+/* Tablas responsivas */
+.dash-table-container {
+  font-family: var(--font-family) !important;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-table-container .dash-spreadsheet-container {
+  border-radius: var(--border-radius);
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner {
+  border-radius: var(--border-radius);
+}
+
+/* Gráficos de Plotly */
+.js-plotly-plot {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Sliders personalizados */
+.rc-slider {
+  margin: 1rem 0 2rem 0 !important;
+}
+
+.rc-slider-track {
+  background: linear-gradient(90deg, var(--color-info), #1D4ED8) !important;
+  height: 6px !important;
+}
+
+.rc-slider-handle {
+  border: 3px solid var(--color-info) !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin-top: -6px !important;
+  background-color: white !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.rc-slider-handle:hover {
+  border-color: #1D4ED8 !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.rc-slider-handle:active {
+  box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Dropdown personalizado */
+.Select-control {
+  border: 2px solid #D1D5DB !important;
+  border-radius: var(--border-radius) !important;
+  padding: 0.25rem !important;
+  transition: var(--transition) !important;
+}
+
+.Select-control:hover {
+  border-color: var(--color-info) !important;
+}
+
+.is-focused .Select-control {
+  border-color: var(--color-info) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Estados de carga */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--color-info);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .dashboard-card {
+    padding: 1rem;
+  }
+  
+  .tab-style {
+    padding: 8px 16px !important;
+    font-size: 0.875rem !important;
+  }
+  
+  h1 {
+    font-size: 1.75rem !important;
+  }
+  
+  h2 {
+    font-size: 1.5rem !important;
+  }
+  
+  h3 {
+    font-size: 1.25rem !important;
+  }
+  
+  .btn-primary {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-card {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .tab-style {
+    padding: 6px 12px !important;
+    margin-right: 2px !important;
+  }
+  
+  .form-input {
+    padding: 0.625rem;
+  }
+}
+
+/* Accesibilidad mejorada */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Tema oscuro (para futuras implementaciones) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: #111827;
+    --color-card: #1F2937;
+  }
+  
+  body {
+    background-color: var(--color-background) !important;
+    color: #F9FAFB !important;
+  }
+  
+  .dashboard-card {
+    background-color: var(--color-card);
+    border-color: #374151;
+  }
+}
+
+/* Estilos específicos para componentes Dash */
+._dash-undo-redo {
+  display: none !important;
+}
+
+.dash-spreadsheet-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Mejoras en la navegación */
+.tab-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 0.5rem;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  box-shadow: var(--shadow-md);
+}
+
+/* Estados especiales para elementos interactivos */
+.interactive-element {
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.interactive-element:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-lg);
+}
+
+.interactive-element:active {
+  transform: scale(0.98);
+}
+
+/* Estilos para elementos de progreso */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #E5E7EB;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-low-risk), var(--color-moderate-risk), var(--color-high-risk));
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background-image: linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.2) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 50px 50px;
+  animation: move 2s linear infinite;
+}
+
+@keyframes move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 50px 50px;
+  }
+}

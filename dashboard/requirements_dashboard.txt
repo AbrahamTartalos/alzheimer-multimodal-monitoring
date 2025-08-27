@@ -1,0 +1,69 @@
+# ==========================================
+# REQUISITOS PARA DASHBOARD ALZHEIMER
+# Proyecto: Monitorización y Predicción Multimodal de Alzheimer - Fase 6
+# ==========================================
+
+# Framework principal
+dash==2.17.1
+plotly==5.17.0
+
+# Manipulación de datos
+pandas==2.1.4
+numpy==1.24.4
+
+# Machine Learning (para cargar modelos de MLflow)
+scikit-learn==1.3.2
+mlflow==2.8.1
+
+# Utilidades adicionales
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Para despliegue en Render
+gunicorn==21.2.0
+
+# Logging y monitoreo
+python-json-logger==2.0.7
+
+# Validación de datos
+jsonschema==4.20.0
+
+# Para manejo de archivos JSON y CSV
+openpyxl==3.1.2
+
+# Herramientas de desarrollo (opcional)
+python-dotenv==1.0.0
+
+# Para estadísticas descriptivas
+scipy==1.11.4
+
+# Para manejo de fechas
+arrow==1.3.0
+
+# Seguridad y validación
+werkzeug==3.0.1
+
+# ==========================================
+# NOTAS DE INSTALACIÓN:
+# ==========================================
+# 1. Instalar en entorno virtual:
+#    python -m venv venv
+#    source venv/bin/activate  # En Linux/Mac
+#    venv\Scripts\activate     # En Windows
+#    pip install -r requirements_dashboard.txt
+#
+# 2. Para desarrollo:
+#    pip install -r requirements_dashboard.txt
+#    python alzheimer_dashboard.py
+#
+# 3. Para producción (Render):
+#    Render instalará automáticamente estas dependencias
+#    usando gunicorn como servidor WSGI
+#
+# ==========================================
+# COMPATIBILIDAD:
+# ==========================================
+# - Python 3.10+
+# - Navegadores modernos (Chrome, Brave, Safari, Edge)
+# - Responsive design para móviles y tablets
+# ==========================================
