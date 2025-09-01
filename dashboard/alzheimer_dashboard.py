@@ -1,7 +1,7 @@
 """
 Dashboard Interactivo de Monitorización y Prevención de Alzheimer
 Proyecto: Monitorización y Predicción Multimodal de Alzheimer - Fase 6
-Autor: Sistema de Ciencia de Datos
+Autor: Abraham Tartalos
 Fecha: 2025
 
 Dashboard accesible para usuarios médicos y no médicos con explicaciones claras,
@@ -29,25 +29,76 @@ logger = logging.getLogger(__name__)
 # ==========================================
 
 class AlzheimerDashboardConfig:
-    """Configuración centralizada del dashboard"""
+    """Configuración centralizada del dashboard con nueva paleta médica profesional"""
     
     def __init__(self):
+        # NUEVA PALETA MÉDICA PROFESIONAL
         self.colors = {
-            'low_risk': '#10B981',      # Verde - Riesgo Bajo
-            'moderate_risk': '#F59E0B', # Amarillo - Riesgo Moderado  
-            'high_risk': '#EF4444',     # Rojo - Riesgo Alto
-            'info': '#3B82F6',          # Azul - Información
-            'secondary': '#6B7280',     # Gris - Secundario
-            'background': '#F9FAFB',    # Fondo claro
-            'card': '#FFFFFF'           # Fondo de tarjetas
+            # Colores principales
+            'primary': '#2563eb',           # Azul médico
+            'secondary': '#0f766e',         # Teal oscuro
+            'text': '#374151',              # Gris carbón
+            
+            # Colores funcionales de riesgo
+            'low_risk': '#059669',          # Verde esmeralda (antes #10B981)
+            'moderate_risk': '#d97706',     # Ámbar (antes #F59E0B)
+            'high_risk': '#dc2626',         # Rojo coral (antes #EF4444)
+            
+            # Colores especiales
+            'neuro': '#7c3aed',             # Púrpura suave (datos neurológicos)
+            'info': '#2563eb',              # Azul médico (mismo que primary)
+            
+            # Fondos
+            'background': '#f8fafc',        # Gris muy claro (antes #F9FAFB)
+            'card': '#ffffff',              # Blanco
+            'data_bg': '#eff6ff',           # Azul muy claro (áreas importantes)
+            
+            # Utilidades
+            'border': '#e2e8f0',            # Bordes suaves
+            'muted': '#64748b',             # Texto secundario
+            'disabled': '#cbd5e1'           # Elementos deshabilitados
         }
         
+        # Mantener thresholds existentes
         self.thresholds = {
             'low_risk': 0.3,
             'moderate_risk': 0.7,
             'high_risk': 1.0
         }
         
+        # Color maps específicos para gráficos
+        self.color_maps = {
+            'risk_categories': {
+                'Bajo': self.colors['low_risk'],
+                'Moderado': self.colors['moderate_risk'],
+                'Alto': self.colors['high_risk']
+            },
+            'feature_groups': {
+                'biomarcadores': self.colors['high_risk'],     # Rojo coral para biomarcadores críticos
+                'cognitivo': self.colors['moderate_risk'],     # Ámbar para evaluaciones cognitivas
+                'demografico': self.colors['info'],            # Azul médico para demográficos
+                'neuroimagen': self.colors['neuro'],           # Púrpura para neuroimagen
+                'lifestyle': self.colors['low_risk']           # Verde para estilo de vida
+            },
+            'gradients': {
+                'primary': f"linear-gradient(135deg, {self.colors['primary']}, #1d4ed8)",
+                'secondary': f"linear-gradient(135deg, {self.colors['secondary']}, #0d9488)",
+                'risk': f"linear-gradient(90deg, {self.colors['low_risk']}, {self.colors['moderate_risk']}, {self.colors['high_risk']})",
+                'neuro': f"linear-gradient(135deg, {self.colors['neuro']}, #6366f1)"
+            }
+        }
+        
+        # Configuración de transparencias para overlays - CORREGIDO
+        self.alpha_colors = {
+            'primary_10': f"rgba(37, 99, 235, 0.1)",      # 10% opacity
+            'primary_20': f"rgba(37, 99, 235, 0.2)",      # 20% opacity
+            'low_risk_10': f"rgba(5, 150, 105, 0.1)",
+            'moderate_risk_10': f"rgba(217, 119, 6, 0.1)",
+            'high_risk_10': f"rgba(220, 38, 38, 0.1)",
+            'neuro_10': f"rgba(124, 58, 237, 0.1)"
+        }
+        
+        # Mantener configuración existente
         self.feature_groups = {
             'biomarcadores': ['tau_protein', 'abeta_42', 'ptau_181', 'nfl_protein'],
             'neuroimagen': ['hippocampus_volume', 'entorhinal_thickness', 'whole_brain_volume'],
@@ -66,6 +117,17 @@ class AlzheimerDashboardConfig:
             'hippocampus_volume': 'Volumen del Hipocampo: Área cerebral crucial para la memoria.',
             'apoe4_carriers': 'Gen APOE4: Variante genética que aumenta el riesgo de Alzheimer.'
         }
+
+
+def hex_to_rgba(hex_color, alpha=0.1):
+    """Convierte color hexadecimal a rgba con transparencia"""
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 6:
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        return f"rgba({r}, {g}, {b}, {alpha})"
+    return f"rgba(128, 128, 128, {alpha})"  # fallback
 
 # Instancia global de configuración
 config = AlzheimerDashboardConfig()
@@ -149,18 +211,63 @@ def generate_feature_importance():
 sample_data = generate_sample_data()
 feature_importance = generate_feature_importance()
 
+# AGREGAR ESTA FUNCIÓN Y DATOS FALTANTES:
+def generate_monitoring_data():
+    """Genera datos de monitoreo para el dashboard"""
+    dates = pd.date_range(start='2024-01-01', end='2025-08-31', freq='W')
+    monitoring_data = pd.DataFrame({
+        'date': dates,
+        'total_patients': np.cumsum(np.random.poisson(10, len(dates))) + 100,
+        'high_risk': np.cumsum(np.random.poisson(2, len(dates))) + 20,
+        'moderate_risk': np.cumsum(np.random.poisson(3, len(dates))) + 30,
+        'low_risk': np.cumsum(np.random.poisson(5, len(dates))) + 50,
+        'model_accuracy': 0.87 + np.random.normal(0, 0.02, len(dates)).cumsum() * 0.001
+    })
+    monitoring_data['model_accuracy'] = monitoring_data['model_accuracy'].clip(0.82, 0.92)
+    return monitoring_data
+
+# Generar datos de monitoreo
+monitoring_data = generate_monitoring_data()
+
 # ==========================================
 # FUNCIONES DE UTILIDAD
 # ==========================================
 
 def get_risk_color(probability):
-    """Obtiene el color según la probabilidad de riesgo"""
+    """Obtiene el color según la probabilidad de riesgo con nueva paleta"""
     if probability < config.thresholds['low_risk']:
-        return config.colors['low_risk']
+        return config.colors['low_risk']      # Verde esmeralda
     elif probability < config.thresholds['moderate_risk']:
-        return config.colors['moderate_risk']
+        return config.colors['moderate_risk'] # Ámbar
     else:
-        return config.colors['high_risk']
+        return config.colors['high_risk']     # Rojo coral
+
+def get_risk_category_style(category):
+    """Obtiene estilos completos para categorías de riesgo"""
+    styles = {
+        'Bajo': {
+            'color': config.colors['low_risk'],
+            'backgroundColor': config.alpha_colors['low_risk_10'],
+            'borderColor': config.colors['low_risk']
+        },
+        'Moderado': {
+            'color': config.colors['moderate_risk'],
+            'backgroundColor': config.alpha_colors['moderate_risk_10'],
+            'borderColor': config.colors['moderate_risk']
+        },
+        'Alto': {
+            'color': config.colors['high_risk'],
+            'backgroundColor': config.alpha_colors['high_risk_10'],
+            'borderColor': config.colors['high_risk']
+        }
+    }
+    return styles.get(category, styles['Bajo'])
+
+def get_feature_group_color(group):
+    """Obtiene color específico para grupo de características"""
+    return config.color_maps['feature_groups'].get(group, config.colors['primary'])
+
+
 
 def get_risk_category(probability):
     """Obtiene la categoría de riesgo"""
@@ -241,6 +348,9 @@ app = dash.Dash(__name__, external_stylesheets=[
     'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ])
+
+# Permitir callbacks en componentes que se cargan dinámicamente
+app.config.suppress_callback_exceptions = True
 
 app.title = "Dashboard Alzheimer - Monitorización Inteligente"
 
@@ -465,29 +575,7 @@ def update_risk_evaluation(n_clicks, age, education, apoe4, mmse, cdr, tau, abet
     return html.Div([
         # Gauge principal
         html.Div([
-            dcc.Graph(
-                figure=go.Figure(go.Indicator(
-                    mode = "gauge+number+delta",
-                    value = risk_probability * 100,
-                    domain = {'x': [0, 1], 'y': [0, 1]},
-                    title = {'text': "Riesgo de Alzheimer (%)"},
-                    delta = {'reference': 50},
-                    gauge = {
-                        'axis': {'range': [None, 100]},
-                        'bar': {'color': risk_color},
-                        'steps': [
-                            {'range': [0, 30], 'color': config.colors['low_risk'] + '40'},
-                            {'range': [30, 70], 'color': config.colors['moderate_risk'] + '40'},
-                            {'range': [70, 100], 'color': config.colors['high_risk'] + '40'}
-                        ],
-                        'threshold': {
-                            'line': {'color': "red", 'width': 4},
-                            'thickness': 0.75,
-                            'value': 90
-                        }
-                    }
-                )).update_layout(height=300, margin=dict(l=20, r=20, t=40, b=20))
-            )
+            dcc.Graph(figure=create_risk_gauge(risk_probability))
         ], className="mb-6"),
         
         # Resultado principal
@@ -537,13 +625,7 @@ def render_risk_factors_tab():
                     orientation='h',
                     title="Top 10 Factores Más Importantes para la Predicción",
                     labels={'importance': 'Importancia (%)', 'feature': 'Factor'},
-                    color_discrete_map={
-                        'biomarcadores': config.colors['high_risk'],
-                        'cognitivo': config.colors['moderate_risk'],
-                        'demografico': config.colors['info'],
-                        'neuroimagen': config.colors['low_risk'],
-                        'lifestyle': config.colors['secondary']
-                    }
+                    color_discrete_map=config.color_maps['feature_groups']
                 ).update_layout(
                     height=500,
                     yaxis={'categoryorder': 'total ascending'},
@@ -760,9 +842,9 @@ def render_case_examples_tab():
                                     'axis': {'range': [None, 100]},
                                     'bar': {'color': case_examples[0]['color']},
                                     'steps': [
-                                        {'range': [0, 30], 'color': config.colors['low_risk'] + '40'},
-                                        {'range': [30, 70], 'color': config.colors['moderate_risk'] + '40'},
-                                        {'range': [70, 100], 'color': config.colors['high_risk'] + '40'}
+                                        {'range': [0, 30], 'color': hex_to_rgba(config.colors['low_risk'], 0.3)},
+                                        {'range': [30, 70], 'color': hex_to_rgba(config.colors['moderate_risk'], 0.3)},
+                                        {'range': [70, 100], 'color': hex_to_rgba(config.colors['high_risk'], 0.3)}
                                     ]
                                 }
                             )).update_layout(height=250, margin=dict(l=20, r=20, t=40, b=20))
@@ -805,9 +887,9 @@ def render_case_examples_tab():
                                     'axis': {'range': [None, 100]},
                                     'bar': {'color': case_examples[1]['color']},
                                     'steps': [
-                                        {'range': [0, 30], 'color': config.colors['low_risk'] + '40'},
-                                        {'range': [30, 70], 'color': config.colors['moderate_risk'] + '40'},
-                                        {'range': [70, 100], 'color': config.colors['high_risk'] + '40'}
+                                        {'range': [0, 30], 'color': hex_to_rgba(config.colors['low_risk'], 0.3)},
+                                        {'range': [30, 70], 'color': hex_to_rgba(config.colors['moderate_risk'], 0.3)},
+                                        {'range': [70, 100], 'color': hex_to_rgba(config.colors['high_risk'], 0.3)}
                                     ]
                                 }
                             )).update_layout(height=250, margin=dict(l=20, r=20, t=40, b=20))
@@ -850,9 +932,9 @@ def render_case_examples_tab():
                                     'axis': {'range': [None, 100]},
                                     'bar': {'color': case_examples[2]['color']},
                                     'steps': [
-                                        {'range': [0, 30], 'color': config.colors['low_risk'] + '40'},
-                                        {'range': [30, 70], 'color': config.colors['moderate_risk'] + '40'},
-                                        {'range': [70, 100], 'color': config.colors['high_risk'] + '40'}
+                                        {'range': [0, 30], 'color': hex_to_rgba(config.colors['low_risk'], 0.3)},
+                                        {'range': [30, 70], 'color': hex_to_rgba(config.colors['moderate_risk'], 0.3)},
+                                        {'range': [70, 100], 'color': hex_to_rgba(config.colors['high_risk'], 0.3)}
                                     ]
                                 }
                             )).update_layout(height=250, margin=dict(l=20, r=20, t=40, b=20))
@@ -1136,7 +1218,10 @@ def render_learning_center_tab():
                 dcc.Tab(label="🔗 Recursos Adicionales", value="resources")
             ], className="mb-4"),
             
-            html.Div(id="learning-content")
+            html.Div(id="learning-content", children=[
+                # Contenido por defecto
+                render_glossary()
+            ])
         ])
     ])
 
@@ -1154,6 +1239,8 @@ def render_learning_content(active_tab):
         return render_faq()
     elif active_tab == "resources":
         return render_resources()
+    else:
+        return render_glossary()   # Por defecto
 
 def render_glossary():
     """Glosario médico interactivo"""
@@ -1496,61 +1583,385 @@ def render_resources():
 # ==========================================
 # CSS PERSONALIZADO
 # ==========================================
-
-app.index_string = '''
+def get_updated_index_string():
+    return f'''
 <!DOCTYPE html>
 <html>
     <head>
-        {%metas%}
-        <title>{%title%}</title>
-        {%favicon%}
-        {%css%}
+        {{%metas%}}
+        <title>{{%title%}}</title>
+        {{%favicon%}}
+        {{%css%}}
         <style>
-            .tab-style {
+            :root {{
+                --color-primary: {config.colors['primary']};
+                --color-secondary: {config.colors['secondary']};
+                --color-text: {config.colors['text']};
+                --color-low-risk: {config.colors['low_risk']};
+                --color-moderate-risk: {config.colors['moderate_risk']};
+                --color-high-risk: {config.colors['high_risk']};
+                --color-neuro: {config.colors['neuro']};
+                --color-background: {config.colors['background']};
+                --color-card: {config.colors['card']};
+                --color-data-bg: {config.colors['data_bg']};
+            }}
+            
+            .tab-style {{
                 border: none !important;
                 border-radius: 8px 8px 0 0 !important;
-                background-color: #F3F4F6 !important;
-                color: #6B7280 !important;
+                background-color: #e2e8f0 !important;
+                color: #64748b !important;
                 font-weight: 600 !important;
                 padding: 12px 24px !important;
                 margin-right: 4px !important;
                 transition: all 0.2s ease !important;
-            }
-            .tab-style:hover {
-                background-color: #E5E7EB !important;
-                color: #374151 !important;
-            }
-            .tab-selected {
-                background-color: #3B82F6 !important;
+            }}
+            
+            .tab-style:hover {{
+                background-color: #cbd5e1 !important;
+                color: var(--color-text) !important;
+            }}
+            
+            .tab-selected {{
+                background-color: var(--color-primary) !important;
                 color: white !important;
-                border-bottom: 3px solid #1D4ED8 !important;
-            }
-            .dash-table-container {
-                font-family: 'Inter', sans-serif !important;
-            }
-            body {
+                border-bottom: 3px solid #1d4ed8 !important;
+            }}
+            
+            body {{
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-                line-height: 1.6 !important;
-            }
-            h1, h2, h3, h4, h5, h6 {
-                font-family: 'Inter', sans-serif !important;
-            }
+                background-color: var(--color-background) !important;
+                color: var(--color-text) !important;
+            }}
         </style>
+        
     </head>
     <body>
-        {%app_entry%}
+        {{%app_entry%}}
         <footer>
-            {%config%}
-            {%scripts%}
-            {%renderer%}
+            {{%config%}}
+            {{%scripts%}}
+            {{%renderer%}}
         </footer>
     </body>
 </html>
 '''
+
+
+app.index_string = get_updated_index_string()
+
+# Header con nueva paleta
+def create_header():
+    return html.Div([
+        html.Div([
+            html.H1([
+                html.I(className="fas fa-brain mr-3", style={'color': config.colors['neuro']}),
+                "Dashboard de Monitorización de Alzheimer"
+            ], className="text-3xl font-bold", style={'color': config.colors['text']}),
+            html.P(
+                "Sistema inteligente de evaluación y prevención - Accesible para todos los usuarios",
+                className="mt-2", style={'color': config.colors['muted']}
+            )
+        ], className="flex-1"),
+        html.Div([
+            html.Div([
+                html.I(className="fas fa-calendar-alt mr-2", style={'color': config.colors['primary']}),
+                datetime.now().strftime("%d/%m/%Y")
+            ], className="text-sm", style={'color': config.colors['muted']}),
+            html.Div([
+                html.I(className="fas fa-users mr-2", style={'color': config.colors['secondary']}),
+                f"{len(sample_data)} pacientes monitoreados"
+            ], className="text-sm mt-1", style={'color': config.colors['muted']})
+        ])
+    ], className="shadow-lg rounded-lg p-6 mb-6 flex items-center justify-between",
+       style={'backgroundColor': config.colors['card'], 'border': f"1px solid {config.colors['border']}"})
+
+
+def create_risk_cards():
+    """Crear cards de métricas con nueva paleta"""
+    cards_data = [
+        {
+            'title': 'Total Pacientes',
+            'value': f"{monitoring_data['total_patients'].iloc[-1]:,}",
+            'icon': 'fas fa-users',
+            'color': config.colors['primary'],
+            'bg_color': config.alpha_colors['primary_10']
+        },
+        {
+            'title': 'Precisión del Modelo',
+            'value': f"{monitoring_data['model_accuracy'].iloc[-1]:.1%}",
+            'icon': 'fas fa-bullseye',
+            'color': config.colors['low_risk'],
+            'bg_color': config.alpha_colors['low_risk_10']
+        },
+        {
+            'title': 'Alto Riesgo',
+            'value': f"{monitoring_data['high_risk'].iloc[-1]:,}",
+            'icon': 'fas fa-exclamation-triangle',
+            'color': config.colors['high_risk'],
+            'bg_color': config.alpha_colors['high_risk_10']
+        },
+        {
+            'title': 'Datos Neurológicos',
+            'value': '1,247',
+            'icon': 'fas fa-brain',
+            'color': config.colors['neuro'],
+            'bg_color': config.alpha_colors['neuro_10']
+        }
+    ]
+    
+    return html.Div([
+        html.Div([
+            html.Div([
+                html.I(className=f"{card['icon']} text-3xl mb-2", style={'color': card['color']}),
+                html.H3(card['value'], className="text-2xl font-bold", style={'color': config.colors['text']}),
+                html.P(card['title'], style={'color': config.colors['muted']}),
+            ], className="text-center")
+        ], className="rounded-lg shadow-md p-6", 
+           style={'backgroundColor': card['bg_color'], 'border': f"1px solid {card['color']}33"})
+        for card in cards_data
+    ], className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6")
+
+def create_alert_components():
+    """Crear componentes de alerta con nueva paleta"""
+    alerts = [
+        {
+            'type': 'critical',
+            'icon': 'fas fa-exclamation-circle',
+            'title': 'Pacientes de Alto Riesgo Sin Seguimiento',
+            'message': '8 pacientes clasificados como alto riesgo no tienen cita programada',
+            'color': config.colors['high_risk'],
+            'bg_color': config.alpha_colors['high_risk_10']
+        },
+        {
+            'type': 'warning',
+            'icon': 'fas fa-exclamation-triangle',
+            'title': 'Biomarcadores Pendientes',
+            'message': '15 pacientes tienen resultados de biomarcadores pendientes de análisis',
+            'color': config.colors['moderate_risk'],
+            'bg_color': config.alpha_colors['moderate_risk_10']
+        },
+        {
+            'type': 'info',
+            'icon': 'fas fa-info-circle',
+            'title': 'Actualización de Modelo Disponible',
+            'message': 'Nueva versión del modelo con mejoras en precisión disponible',
+            'color': config.colors['primary'],
+            'bg_color': config.alpha_colors['primary_10']
+        }
+    ]
+    
+    return html.Div([
+        html.Div([
+            html.Div([
+                html.I(className=f"{alert['icon']} text-xl mr-3", style={'color': alert['color']}),
+                html.Div([
+                    html.H4(alert['title'], className="text-lg font-semibold", style={'color': alert['color']}),
+                    html.P(alert['message'], className="mt-1", style={'color': config.colors['muted']})
+                ], className="flex-1"),
+                html.Button("Revisar", 
+                          className="px-4 py-2 rounded-lg text-white font-medium",
+                          style={'backgroundColor': alert['color']})
+            ], className="flex items-center")
+        ], className="border-l-4 p-4 rounded-r-lg mb-3",
+           style={'backgroundColor': alert['bg_color'], 'borderLeftColor': alert['color']})
+        for alert in alerts
+    ])
+
+def create_trend_charts():
+    """Crear gráficos de tendencias con nueva paleta"""
+    # Gráfico de evolución de pacientes
+    evolution_fig = go.Figure([
+        go.Scatter(x=monitoring_data['date'], y=monitoring_data['low_risk'], 
+                 mode='lines+markers', name='Riesgo Bajo', 
+                 line=dict(color=config.colors['low_risk'], width=3),
+                 marker=dict(size=6, color=config.colors['low_risk'])),
+        go.Scatter(x=monitoring_data['date'], y=monitoring_data['moderate_risk'], 
+                 mode='lines+markers', name='Riesgo Moderado',
+                 line=dict(color=config.colors['moderate_risk'], width=3),
+                 marker=dict(size=6, color=config.colors['moderate_risk'])),
+        go.Scatter(x=monitoring_data['date'], y=monitoring_data['high_risk'], 
+                 mode='lines+markers', name='Riesgo Alto',
+                 line=dict(color=config.colors['high_risk'], width=3),
+                 marker=dict(size=6, color=config.colors['high_risk']))
+    ]).update_layout(
+        title="Tendencia de Casos por Nivel de Riesgo",
+        xaxis_title="Fecha",
+        yaxis_title="Número de Pacientes",
+        height=400,
+        hovermode='x unified',
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        paper_bgcolor=config.colors['card'],
+        plot_bgcolor=config.colors['data_bg'],
+        font={'color': config.colors['text']},
+        title_font={'color': config.colors['text'], 'size': 18}
+    )
+    
+    # Gráfico de rendimiento del modelo
+    performance_fig = go.Figure([
+        go.Scatter(x=monitoring_data['date'], y=monitoring_data['model_accuracy'], 
+                 mode='lines+markers', name='Precisión',
+                 line=dict(color=config.colors['primary'], width=3),
+                 marker=dict(size=6, color=config.colors['primary']),
+                 fill='tonexty',
+                 fillcolor=config.alpha_colors['primary_10']),
+        go.Scatter(x=monitoring_data['date'], y=[0.85]*len(monitoring_data), 
+                 mode='lines', name='Umbral Mínimo',
+                 line=dict(color=config.colors['high_risk'], width=2, dash='dash'))
+    ]).update_layout(
+        title="Evolución de la Precisión del Modelo",
+        xaxis_title="Fecha",
+        yaxis_title="Precisión (%)",
+        yaxis=dict(tickformat='.1%', range=[0.8, 0.95]),
+        height=400,
+        hovermode='x unified',
+        paper_bgcolor=config.colors['card'],
+        plot_bgcolor=config.colors['data_bg'],
+        font={'color': config.colors['text']},
+        title_font={'color': config.colors['text'], 'size': 18}
+    )
+    
+    return evolution_fig, performance_fig
+
+
+# ==========================================
+# CONFIGURACIÓN ESPECÍFICA PARA DASH TABLES
+# ==========================================
+
+def get_table_style_config():
+    """Configuración de estilos para tablas Dash"""
+    return {
+        'style_cell': {
+            'textAlign': 'center',
+            'fontSize': '14px',
+            'fontFamily': 'Inter, sans-serif',
+            'color': config.colors['text'],
+            'backgroundColor': config.colors['card'],
+            'border': f'1px solid {config.colors["border"]}'
+        },
+        'style_header': {
+            'backgroundColor': config.colors['primary'],
+            'color': 'white',
+            'fontWeight': 'bold',
+            'border': f'1px solid {config.colors["primary"]}'
+        },
+        'style_data_conditional': [
+            {
+                'if': {'row_index': 'odd'},
+                'backgroundColor': config.colors['data_bg']
+            }
+        ]
+    }
+
+# ==========================================
+# CSS INLINE PARA COMPONENTES ESPECÍFICOS
+# ==========================================
+
+def get_component_styles():
+    """Estilos inline específicos para componentes"""
+    return {
+        'main_container': {
+            'backgroundColor': config.colors['background'],
+            'minHeight': '100vh',
+            'fontFamily': 'Inter, sans-serif'
+        },
+        'card_style': {
+            'backgroundColor': config.colors['card'],
+            'border': f'1px solid {config.colors["border"]}',
+            'borderRadius': '8px',
+            'boxShadow': '0 4px 6px -1px rgba(37, 99, 235, 0.1)',
+            'padding': '1.5rem'
+        },
+        'primary_button': {
+            'background': f'linear-gradient(135deg, {config.colors["primary"]}, #1d4ed8)',
+            'color': 'white',
+            'border': 'none',
+            'borderRadius': '8px',
+            'padding': '0.75rem 1.5rem',
+            'fontWeight': '600',
+            'cursor': 'pointer',
+            'transition': 'all 0.2s ease'
+        },
+        'secondary_button': {
+            'background': f'linear-gradient(135deg, {config.colors["secondary"]}, #0d9488)',
+            'color': 'white',
+            'border': 'none',
+            'borderRadius': '8px',
+            'padding': '0.75rem 1.5rem',
+            'fontWeight': '600',
+            'cursor': 'pointer',
+            'transition': 'all 0.2s ease'
+        },
+        'neuro_highlight': {
+            'background': f'linear-gradient(135deg, {config.alpha_colors["neuro_10"]}, rgba(124, 58, 237, 0.02))',
+            'borderLeft': f'4px solid {config.colors["neuro"]}',
+            'padding': '1rem',
+            'borderRadius': '0 8px 8px 0'
+        }
+    }
+
+
+def create_risk_gauge(risk_probability):
+    """Crear gauge de riesgo con nueva paleta"""
+    risk_color = get_risk_color(risk_probability)
+    
+    return go.Figure(go.Indicator(
+        mode="gauge+number+delta",
+        value=risk_probability * 100,
+        domain={'x': [0, 1], 'y': [0, 1]},
+        title={'text': "Riesgo de Alzheimer (%)", 'font': {'color': config.colors['text']}},
+        delta={'reference': 50},
+        gauge={
+            'axis': {'range': [None, 100], 'tickcolor': config.colors['text']},
+            'bar': {'color': risk_color},
+            'steps': [
+                {'range': [0, 30], 'color': hex_to_rgba(config.colors['low_risk'], 0.3)},
+                {'range': [30, 70], 'color': hex_to_rgba(config.colors['moderate_risk'], 0.3)},
+                {'range': [70, 100], 'color': hex_to_rgba(config.colors['high_risk'], 0.3)}
+            ],
+            'threshold': {
+                'line': {'color': config.colors['high_risk'], 'width': 4},
+                'thickness': 0.75,
+                'value': 90
+            }
+        }
+    )).update_layout(
+        height=300, 
+        margin=dict(l=20, r=20, t=40, b=20),
+        paper_bgcolor=config.colors['card'],
+        font={'color': config.colors['text']}
+    )
+
+def create_feature_importance_chart():
+    """Crear gráfico de importancia con nueva paleta"""
+    return px.bar(
+        feature_importance.head(10),
+        x='importance',
+        y='feature',
+        color='group',
+        orientation='h',
+        title="Top 10 Factores Más Importantes para la Predicción",
+        labels={'importance': 'Importancia (%)', 'feature': 'Factor'},
+        color_discrete_map=config.color_maps['feature_groups']
+    ).update_layout(
+        height=500,
+        yaxis={'categoryorder': 'total ascending'},
+        showlegend=True,
+        paper_bgcolor=config.colors['card'],
+        plot_bgcolor=config.colors['card'],
+        font={'color': config.colors['text']},
+        title_font={'color': config.colors['text'], 'size': 18}
+    )
+
 
 # ==========================================
 # EJECUTAR LA APLICACIÓN
 # ==========================================
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=8050)
+    try:
+        app.run_server(debug=True, host='127.0.0.1', port=8050, 
+                      threaded=True, use_reloader=False, dev_tools_hot_reload=False)
+    except Exception as e:
+        print(f"Error al iniciar el servidor: {e}")
+        app.run_server(debug=False, host='127.0.0.1', port=8050)
