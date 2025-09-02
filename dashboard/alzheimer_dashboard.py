@@ -564,7 +564,8 @@ def update_risk_evaluation(n_clicks, age, education, apoe4, mmse, cdr, tau, abet
         patient_data['apoe4_carriers'] / 2 * 0.1
     )
     
-    risk_probability = max(0, min(1, 1 / (1 + np.exp(-risk_score.clip(-5, 5)))))
+    # CORRECCIÓN: Usar np.clip() en lugar de risk_score.clip()
+    risk_probability = max(0, min(1, 1 / (1 + np.exp(-np.clip(risk_score, -5, 5)))))
     risk_category = get_risk_category(risk_probability)
     risk_color = get_risk_color(risk_probability)
     
