@@ -209,9 +209,9 @@ python landing_page/app.py
 | **1. Preparación y Adquisición de Datos** | Descarga y organización de datos ADNI | ✅ Completado |
 | **2. Exploración y Preprocesamiento** | EDA, limpieza y transformación de datos | ✅ Completado |
 | **3. Feature Engineering y Selección** | Extracción y selección de características | ✅ Completado |
-| **4. Desarrollo de Modelos** | Implementación y entrenamiento de modelos | 🔄 En progreso |
-| **5. Evaluación y Validación** | Evaluación de performance y validación | ⏳ Pendiente |
-| **6. Implementación Dashboard** | Desarrollo de interfaz web interactiva | ⏳ Pendiente |
+| **4. Desarrollo de Modelos** | Implementación y entrenamiento de modelos | ✅ Completado |
+| **5. Evaluación y Validación** | Evaluación de performance y validación | ✅ Completado |
+| **6. Implementación Dashboard** | Desarrollo de interfaz web interactiva | 🔄 En progreso |
 
 ## 📊 Datos
 
