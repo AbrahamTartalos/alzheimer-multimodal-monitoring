@@ -19,6 +19,17 @@ import logging
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
+# Nuevos imports para integración
+import mlflow
+import mlflow.pyfunc
+from pathlib import Path
+import warnings
+warnings.filterwarnings('ignore')
+
+# Configuración de rutas
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_PATH = PROJECT_ROOT / "data" / "processed" / "features"
+REPORTS_PATH = PROJECT_ROOT / "reports" / "evaluation"
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -118,6 +129,45 @@ class AlzheimerDashboardConfig:
             'apoe4_carriers': 'Gen APOE4: Variante genética que aumenta el riesgo de Alzheimer.'
         }
 
+        # Rutas de archivos reales
+        self.config_file = REPORTS_PATH / "dashboard_complete_config.json"
+        self.winners_file = REPORTS_PATH / "model_winners_summary.csv"
+        self.feature_importance_file = REPORTS_PATH / "feature_importance_detailed_summary.csv"
+        self.validation_file = REPORTS_PATH / "subgroup_validation_results.csv"
+        self.clinical_metrics_file = REPORTS_PATH / "clinical_impact_metrics.json"
+        
+        # Datos reales
+        self.real_data_path = DATA_PATH
+        
+        # MLflow configuración
+        self.mlflow_tracking_uri = "file:../mlruns"
+        self.experiments_mapping = {
+            'regression': 'alzheimer_multimodal_monitoring',
+            'classification': 'Default',  # Aquí está el ensemble_classification
+            'temporal': 'alzheimer_temporal_analysis',
+            'stratification': 'alzheimer_risk_stratification'
+        }
+        
+        # Cargar configuración real si existe
+        self.load_real_config()
+
+    def load_real_config(self):
+        """Carga configuración real desde archivos de la etapa 5"""
+        try:
+            if self.config_file.exists():
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    real_config = json.load(f)
+                    # Actualizar configuración con datos reales
+                    if 'feature_groups' in real_config:
+                        self.feature_groups = real_config['feature_groups']
+                    if 'thresholds' in real_config:
+                        self.thresholds.update(real_config['thresholds'])
+                    logger.info("Configuración real cargada exitosamente")
+            else:
+                logger.warning(f"Archivo de configuración no encontrado: {self.config_file}")
+        except Exception as e:
+            logger.error(f"Error cargando configuración real: {e}")
+
 
 def hex_to_rgba(hex_color, alpha=0.1):
     """Convierte color hexadecimal a rgba con transparencia"""
@@ -131,6 +181,31 @@ def hex_to_rgba(hex_color, alpha=0.1):
 
 # Instancia global de configuración
 config = AlzheimerDashboardConfig()
+
+def verify_mlflow_setup():
+    """Verificar configuración MLflow"""
+    logger.info("=== VERIFICACIÓN MLFLOW ===")
+    
+    # Verificar directorio mlruns
+    mlruns_path = Path("./mlruns")
+    if mlruns_path.exists():
+        logger.info(f"✅ Directorio mlruns encontrado: {mlruns_path.absolute()}")
+        
+        # Listar experimentos disponibles
+        try:
+            mlflow.set_tracking_uri("file:./mlruns")
+            experiments = mlflow.search_experiments()
+            logger.info(f"✅ Experimentos encontrados: {len(experiments)}")
+            for exp in experiments:
+                logger.info(f"   - {exp.name} (ID: {exp.experiment_id})")
+        except Exception as e:
+            logger.error(f"❌ Error listando experimentos: {e}")
+    else:
+        logger.error(f"❌ Directorio mlruns no encontrado: {mlruns_path.absolute()}")
+        logger.info("💡 Ejecuta el dashboard desde la carpeta raíz del proyecto")
+
+# Llamar verificación
+verify_mlflow_setup()
 
 # ==========================================
 # GENERACIÓN DE DATOS SIMULADOS
@@ -207,11 +282,109 @@ def generate_feature_importance():
         ]
     }).sort_values('importance', ascending=False)
 
-# Cargar datos
-sample_data = generate_sample_data()
-feature_importance = generate_feature_importance()
 
-# AGREGAR ESTA FUNCIÓN Y DATOS FALTANTES:
+def load_real_data():
+    """Carga datos reales desde archivos de la etapa 5"""
+    try:
+        # Intentar cargar modelo ganador
+        winners_df = None
+        if config.winners_file.exists():
+            winners_df = pd.read_csv(config.winners_file)
+            logger.info(f"Modelos ganadores cargados: {len(winners_df)} modelos")
+        
+        # Intentar cargar datos procesados reales
+        # Ruta específica de tu archivo
+        specific_data_path = PROJECT_ROOT / "data" / "processed" / "features" / "alzheimer_features_selected_20250621.csv"
+        
+        if specific_data_path.exists():
+            real_data = pd.read_csv(specific_data_path)
+            logger.info(f"Datos reales cargados desde archivo específico: {len(real_data)} pacientes")
+            return real_data, winners_df
+        else:
+            # Fallback: buscar otros archivos CSV en processed
+            real_data_files = list(config.real_data_path.glob("**/*.csv"))  # Búsqueda recursiva
+            if real_data_files:
+                logger.info(f"Archivos encontrados: {[f.name for f in real_data_files]}")
+                # Buscar archivo con patrón específico
+                main_data_file = next((f for f in real_data_files 
+                                     if 'alzheimer_features' in f.name or 'processed' in f.name or 'final' in f.name), 
+                                     None)
+                if main_data_file:
+                    real_data = pd.read_csv(main_data_file)
+                    logger.info(f"Datos reales cargados desde: {main_data_file.name} - {len(real_data)} pacientes")
+                    return real_data, winners_df
+        
+        logger.warning("No se encontraron datos reales, usando datos simulados")
+        return None, None
+        
+    except Exception as e:
+        logger.error(f"Error cargando datos reales: {e}")
+        return None, None
+
+def load_real_feature_importance():
+    """Carga importancia real de características"""
+    try:
+        if config.feature_importance_file.exists():
+            feature_importance = pd.read_csv(config.feature_importance_file)
+            logger.info(f"Feature importance real cargada: {len(feature_importance)} características")
+            logger.info(f"Columnas disponibles: {feature_importance.columns.tolist()}")
+            
+            # Mapear las columnas reales a las que espera el código
+            if 'avg_importance' in feature_importance.columns:
+                feature_importance['importance'] = feature_importance['avg_importance']
+            elif 'perm_importance_avg' in feature_importance.columns:
+                feature_importance['importance'] = feature_importance['perm_importance_avg']
+            else:
+                # Si no hay ninguna columna de importancia reconocida, crear una simulada
+                logger.warning("No se encontró columna de importancia reconocida, usando valores simulados")
+                return generate_feature_importance()
+            
+            # Mapear la columna category a group si no existe group
+            if 'group' not in feature_importance.columns and 'category' in feature_importance.columns:
+                feature_importance['group'] = feature_importance['category']
+            elif 'group' not in feature_importance.columns:
+                # Asignar grupos por defecto basados en el nombre de la característica
+                feature_importance['group'] = feature_importance['feature'].apply(assign_feature_group)
+            
+            # Asegurar que tenemos las columnas necesarias
+            required_columns = ['feature', 'importance', 'group']
+            for col in required_columns:
+                if col not in feature_importance.columns:
+                    logger.error(f"Columna requerida '{col}' no encontrada")
+                    return generate_feature_importance()
+            
+            # Ordenar por importancia
+            feature_importance = feature_importance.sort_values('importance', ascending=False)
+            
+            return feature_importance
+        else:
+            logger.warning("Archivo de feature importance no encontrado, usando simulado")
+            return generate_feature_importance()
+    except Exception as e:
+        logger.error(f"Error cargando feature importance real: {e}")
+        return generate_feature_importance()
+
+def assign_feature_group(feature_name):
+    """Asigna grupo a una característica basado en su nombre"""
+    feature_name_lower = feature_name.lower()
+    
+    if any(word in feature_name_lower for word in ['tau', 'abeta', 'ptau', 'nfl', 'protein']):
+        return 'biomarcadores'
+    elif any(word in feature_name_lower for word in ['mmse', 'cdr', 'adas', 'cognitive', 'memory']):
+        return 'cognitivo'
+    elif any(word in feature_name_lower for word in ['age', 'education', 'apoe', 'sex', 'gender']):
+        return 'demografico'
+    elif any(word in feature_name_lower for word in ['hippocampus', 'volume', 'thickness', 'brain']):
+        return 'neuroimagen'
+    elif any(word in feature_name_lower for word in ['activity', 'physical', 'sleep', 'social']):
+        return 'lifestyle'
+    else:
+        return 'demografico'  # Por defecto
+
+
+
+
+# :
 def generate_monitoring_data():
     """Genera datos de monitoreo para el dashboard"""
     dates = pd.date_range(start='2024-01-01', end='2025-08-31', freq='W')
@@ -226,9 +399,306 @@ def generate_monitoring_data():
     monitoring_data['model_accuracy'] = monitoring_data['model_accuracy'].clip(0.82, 0.92)
     return monitoring_data
 
-# Generar datos de monitoreo
+def load_mlflow_models(winners_df=None):
+    """Carga modelos desde MLflow usando los experimentos correctos"""
+    models = {}
+    
+    try:
+        # Configurar MLflow con la ruta correcta
+        mlflow.set_tracking_uri(config.mlflow_tracking_uri)
+        logger.info(f"Conectando a MLflow en: {config.mlflow_tracking_uri}")
+        
+        # Mapeo de experimentos (igual que en tus notebooks)
+        experiments_mapping = {
+            'regression': 'alzheimer_multimodal_monitoring',
+            'classification': 'Default',  # Aquí está el ensemble_classification
+            'temporal': 'alzheimer_temporal_analysis',
+            'stratification': 'alzheimer_risk_stratification'
+        }
+        
+        # Cargar modelos de cada experimento
+        for task, exp_name in experiments_mapping.items():
+            try:
+                experiment = mlflow.get_experiment_by_name(exp_name)
+                if experiment:
+                    logger.info(f"✅ {task.upper()}: Experimento '{exp_name}' encontrado")
+                    
+                    # Buscar runs finalizados
+                    all_runs = mlflow.search_runs(
+                        experiment_ids=[experiment.experiment_id],
+                        filter_string="status = 'FINISHED'",
+                        order_by=["start_time DESC"],
+                        max_results=10
+                    )
+                    
+                    if not all_runs.empty:
+                        if task == 'classification':
+                            # Buscar específicamente ensemble_classification
+                            ensemble_runs = all_runs[
+                                all_runs.get('tags.mlflow.runName', pd.Series()) == 'ensemble_classification'
+                            ]
+                            if not ensemble_runs.empty:
+                                runs = ensemble_runs
+                                logger.info(f"🎯 Encontrado ensemble_classification")
+                            else:
+                                runs = all_runs.head(3)
+                                logger.info(f"📊 Usando {len(runs)} runs de clasificación")
+                        else:
+                            runs = all_runs.head(3)
+                            logger.info(f"📊 {task}: {len(runs)} runs encontrados")
+                        
+                        # Cargar el mejor modelo de cada tipo
+                        for idx, run in runs.iterrows():
+                            try:
+                                run_id = run.run_id
+                                model_name = f"{task}_{idx}" if pd.isna(run.get('tags.mlflow.runName', None)) else f"{task}_{run.get('tags.mlflow.runName', idx)}"
+                                
+                                # Intentar cargar el modelo
+                                model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
+                                
+                                # Extraer métricas
+                                metrics = {}
+                                for col in run.index:
+                                    if col.startswith('metrics.'):
+                                        metric_name = col.replace('metrics.', '')
+                                        metrics[metric_name] = run[col]
+                                
+                                models[model_name] = {
+                                    'model': model,
+                                    'metrics': metrics,
+                                    'run_id': run_id,
+                                    'task': task,
+                                    'experiment': exp_name
+                                }
+                                
+                                logger.info(f"✅ Modelo cargado: {model_name}")
+                                break  # Solo cargar el mejor de cada tipo
+                                
+                            except Exception as e:
+                                logger.warning(f"⚠️ Error cargando run {run_id}: {e}")
+                                continue
+                    else:
+                        logger.warning(f"⚠️ {task}: Sin runs finalizados en '{exp_name}'")
+                else:
+                    logger.warning(f"❌ {task.upper()}: Experimento '{exp_name}' no encontrado")
+                    
+            except Exception as e:
+                logger.error(f"❌ Error procesando {task}: {e}")
+        
+        logger.info(f"✅ Total modelos MLflow cargados: {len(models)}")
+        return models
+        
+    except Exception as e:
+        logger.error(f"❌ Error conectando con MLflow: {e}")
+        return {}
+
+
+def load_pickle_model():
+    """Carga modelo pickle como fallback"""
+    try:
+        import pickle
+        
+        pickle_model_path = PROJECT_ROOT / "models" / "pretrained" / "best_xgboost_model.pkl"
+        
+        if pickle_model_path.exists():
+            with open(pickle_model_path, 'rb') as f:
+                pickle_model = pickle.load(f)
+            
+            logger.info(f"✅ Modelo pickle cargado: {pickle_model_path}")
+            
+            return {
+                'pickle_xgboost': {
+                    'model': pickle_model,
+                    'metrics': {
+                        'accuracy': 0.87,  # Métricas por defecto
+                        'precision': 0.85,
+                        'recall': 0.89,
+                        'f1_score': 0.87
+                    },
+                    'run_id': 'pickle_model',
+                    'task': 'classification',
+                    'experiment': 'pickle_fallback'
+                }
+            }
+        else:
+            logger.warning(f"❌ Modelo pickle no encontrado: {pickle_model_path}")
+            return {}
+            
+    except Exception as e:
+        logger.error(f"❌ Error cargando modelo pickle: {e}")
+        return {}
+
+
+def get_mlflow_runs_info():
+    """Obtiene información de los runs disponibles en MLflow"""
+    try:
+        mlflow.set_tracking_uri(config.mlflow_tracking_uri)
+        
+        # Obtener experimentos
+        experiments = mlflow.search_experiments()
+        logger.info(f"Experimentos encontrados: {len(experiments)}")
+        
+        runs_info = []
+        for experiment in experiments:
+            runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id])
+            logger.info(f"Experimento {experiment.name}: {len(runs)} runs")
+            
+            for idx, run in runs.iterrows():
+                runs_info.append({
+                    'run_id': run['run_id'],
+                    'experiment_name': experiment.name,
+                    'status': run['status'],
+                    'metrics': {key: value for key, value in run.items() if key.startswith('metrics.')},
+                    'start_time': run['start_time']
+                })
+        
+        logger.info(f"Total runs encontrados: {len(runs_info)}")
+        return runs_info
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo runs de MLflow: {e}")
+        return []
+
+def debug_files_status():
+    """Debug: verificar estado de archivos"""
+    logger.info("=== DEBUG: Estado de archivos ===")
+    files_to_check = [
+        config.config_file,
+        config.winners_file,
+        config.feature_importance_file,
+        config.validation_file,
+        config.clinical_metrics_file
+    ]
+    
+    for file_path in files_to_check:
+        if file_path.exists():
+            logger.info(f"✅ Encontrado: {file_path}")
+            if file_path.suffix == '.csv':
+                try:
+                    df = pd.read_csv(file_path)
+                    logger.info(f"   - Filas: {len(df)}, Columnas: {df.columns.tolist()}")
+                except Exception as e:
+                    logger.error(f"   - Error leyendo CSV: {e}")
+        else:
+            logger.warning(f"❌ No encontrado: {file_path}")
+    
+    # Verificar directorio MLflow 
+    mlflow_dir = PROJECT_ROOT / "mlruns"  # Cambiar aquí
+    if mlflow_dir.exists():
+        logger.info(f"✅ Directorio MLflow encontrado: {mlflow_dir}")
+        # Listar experimentos
+        experiments = list(mlflow_dir.glob("*/"))
+        logger.info(f"   - Experimentos encontrados: {[e.name for e in experiments]}")
+    else:
+        logger.warning(f"❌ Directorio MLflow no encontrado: {mlflow_dir}")
+
+    # Verificar modelo pickle
+    pickle_model_path = PROJECT_ROOT / "models" / "pretrained" / "best_xgboost_model.pkl"
+    if pickle_model_path.exists():
+        logger.info(f"✅ Modelo pickle encontrado: {pickle_model_path}")
+    else:
+        logger.warning(f"❌ Modelo pickle no encontrado: {pickle_model_path}")
+        # Listar archivos en el directorio models
+        models_dir = PROJECT_ROOT / "models"
+        if models_dir.exists():
+            logger.info(f"📁 Archivos en {models_dir}:")
+            for item in models_dir.rglob("*"):
+                if item.is_file():
+                    logger.info(f"   - {item.relative_to(models_dir)}")
+
+
+def predict_with_real_model(patient_data, model_name=None):
+    """Hace predicción con modelo real (MLflow o pickle)"""
+    try:
+        # Si no se especifica modelo, usar el primero disponible
+        if model_name is None and loaded_models:
+            model_name = list(loaded_models.keys())[0]
+            logger.info(f"Usando primer modelo disponible: {model_name}")
+        
+        logger.info(f"Intentando predicción con modelo: {model_name}")
+        logger.info(f"Modelos disponibles: {list(loaded_models.keys())}")
+        
+        if loaded_models and model_name in loaded_models:
+            model_info = loaded_models[model_name]
+            model = model_info['model']
+            
+            # Preparar datos para predicción
+            input_df = pd.DataFrame([patient_data])
+            
+            # Verificar si necesitamos solo ciertas columnas (para el modelo pickle)
+            if model_name == 'pickle_xgboost':
+                # El modelo pickle puede necesitar columnas específicas
+                # Mantener solo las columnas que el modelo espera
+                expected_features = [
+                    'age', 'education_years', 'mmse_score', 'cdr_score', 
+                    'tau_protein', 'abeta_42', 'apoe4_carriers'
+                ]
+                available_features = [col for col in expected_features if col in input_df.columns]
+                input_df = input_df[available_features]
+                logger.info(f"Usando {len(available_features)} características para predicción pickle")
+            
+            # Hacer predicción
+            if hasattr(model, 'predict_proba'):
+                # Para modelos con predict_proba
+                prediction_proba = model.predict_proba(input_df)
+                probability = prediction_proba[0][1] if prediction_proba.shape[1] > 1 else prediction_proba[0][0]
+            elif hasattr(model, 'predict'):
+                # Para modelos MLflow o predict simple
+                prediction = model.predict(input_df)
+                probability = prediction[0] if isinstance(prediction, (list, np.ndarray)) else prediction
+            else:
+                logger.error(f"Modelo {model_name} no tiene método predict")
+                return None, None
+            
+            # Asegurar que la probabilidad esté en rango [0, 1]
+            probability = float(np.clip(probability, 0, 1))
+            
+            logger.info(f"✅ Predicción exitosa con {model_name}: {probability:.3f}")
+            return probability, model_info['metrics']
+            
+        else:
+            logger.warning(f"⚠️ Modelo {model_name} no encontrado, usando cálculo simulado")
+            return None, None
+            
+    except Exception as e:
+        logger.error(f"❌ Error en predicción con {model_name}: {e}")
+        return None, None
+
+# Cargar datos (reales o simulados)
+real_data, winners_df = load_real_data()
+if real_data is not None:
+    sample_data = real_data
+    logger.info("Usando datos reales")
+else:
+    sample_data = generate_sample_data()
+    logger.info("Usando datos simulados")
+
+# Cargar feature importance (real o simulada)
+feature_importance = load_real_feature_importance()
+
+# Cargar datos de monitoreo
 monitoring_data = generate_monitoring_data()
 
+# Cargar modelos desde MLflow (sin depender de winners_df)
+loaded_models = {}
+loaded_models = load_mlflow_models()
+
+# Si no hay modelos MLflow, cargar modelo pickle
+if not loaded_models:
+    logger.info("No hay modelos MLFlow, cargando  modelo pickle...")
+    pickle_models = load_pickle_model()
+    loaded_models.update(pickle_models)
+
+# Mensaje si no se cargó ningún modelo
+if not loaded_models:
+    logger.warning("No se pudieron cargar modelos MLflow ni pickle, usando solo cálculos simulados.")
+
+# Llamar debug al inicializar
+debug_files_status()
+# Debug final
+logger.info(f"Estado final - Modelos cargados: {len(loaded_models)}")
+if loaded_models:
+    logger.info(f"Nombres de modelos: {list(loaded_models.keys())}")
 # ==========================================
 # FUNCIONES DE UTILIDAD
 # ==========================================
@@ -373,12 +843,14 @@ app.layout = html.Div([
         ], className="flex-1"),
         html.Div([
             html.Div([
-                html.I(className="fas fa-calendar-alt mr-2"),
-                datetime.now().strftime("%d/%m/%Y")
+                html.I(className="fas fa-clock mr-2"),            # icono de reloj
+                html.Span(id="client-time", children="Cargando...")  # aquí irá la hora cliente
             ], className="text-sm text-gray-600"),
+            # añade este Interval junto al resto de componentes de layout
+            dcc.Interval(id="interval-time", interval=1000, n_intervals=0),  # actualiza cada 1000 ms
             html.Div([
-                html.I(className="fas fa-users mr-2"),
-                f"{len(sample_data)} pacientes monitoreados"
+                html.I(className="fas fa-users mr-2"), # Icono de usuarios
+                f"≈2000 pacientes monitoreados" # Número de pacientes
             ], className="text-sm text-gray-600 mt-1")
         ])
     ], className="bg-white shadow-lg rounded-lg p-6 mb-6 flex items-center justify-between"),
@@ -405,6 +877,25 @@ app.layout = html.Div([
 # ==========================================
 # CALLBACKS PRINCIPALES
 # ==========================================
+
+
+app.clientside_callback(
+    """
+    function(n_intervals) {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const dd = pad(now.getDate());
+        const mm = pad(now.getMonth() + 1);
+        const yyyy = now.getFullYear();
+        const hh = pad(now.getHours());
+        const mi = pad(now.getMinutes());
+        const ss = pad(now.getSeconds());
+        return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
+    }
+    """,
+    Output("client-time", "children"),
+    Input("interval-time", "n_intervals")
+)
 
 @app.callback(
     Output("tabs-content", "children"),
@@ -554,18 +1045,25 @@ def update_risk_evaluation(n_clicks, age, education, apoe4, mmse, cdr, tau, abet
         'social_engagement': 5
     }
     
-    # Calcular probabilidad de riesgo (simplificado)
-    risk_score = (
-        (patient_data['age'] - 50) / 40 * 0.2 +
-        (30 - patient_data['mmse_score']) / 30 * 0.25 +
-        patient_data['cdr_score'] / 3 * 0.2 +
-        (patient_data['tau_protein'] - 60) / 100 * 0.15 +
-        (800 - patient_data['abeta_42']) / 400 * 0.1 +
-        patient_data['apoe4_carriers'] / 2 * 0.1
-    )
-    
-    # CORRECCIÓN: Usar np.clip() en lugar de risk_score.clip()
-    risk_probability = max(0, min(1, 1 / (1 + np.exp(-np.clip(risk_score, -5, 5)))))
+    # Intentar predicción con modelo real
+    real_prediction, model_metrics = predict_with_real_model(patient_data)
+
+    if real_prediction is not None:
+        risk_probability = real_prediction
+        logger.info(f"Predicción real: {risk_probability:.3f}")
+    else:
+        # Fallback a cálculo simulado
+        risk_score = (
+            (patient_data['age'] - 50) / 40 * 0.2 +
+            (30 - patient_data['mmse_score']) / 30 * 0.25 +
+            patient_data['cdr_score'] / 3 * 0.2 +
+            (patient_data['tau_protein'] - 60) / 100 * 0.15 +
+            (800 - patient_data['abeta_42']) / 400 * 0.1 +
+            patient_data['apoe4_carriers'] / 2 * 0.1
+        )
+    risk_probability = max(0, min(1, 1 / (1 + np.exp(-max(-5, min(5, risk_score))))))
+    logger.info("Usando cálculo simulado")
+
     risk_category = get_risk_category(risk_probability)
     risk_color = get_risk_color(risk_probability)
     
@@ -626,11 +1124,32 @@ def render_risk_factors_tab():
                     orientation='h',
                     title="Top 10 Factores Más Importantes para la Predicción",
                     labels={'importance': 'Importancia (%)', 'feature': 'Factor'},
-                    color_discrete_map=config.color_maps['feature_groups']
+                    color_discrete_map=config.color_maps['feature_groups'],
+                    # SOLUCIÓN: Personalizar el template del hover
+                    hover_data={
+                        'importance': ':.1%',  # Mostrar como porcentaje con 1 decimal
+                        'group': True          # Incluir el grupo
+                    }
                 ).update_layout(
                     height=500,
                     yaxis={'categoryorder': 'total ascending'},
-                    showlegend=True
+                    showlegend=True,
+                    # SOLUCIÓN: Configurar el estilo del hover
+                    hoverlabel=dict(
+                        bgcolor="white",           # Fondo blanco
+                        font_size=14,             # Tamaño de fuente legible
+                        font_family="Inter",      # Fuente consistente
+                        font_color="black",       # Texto negro para contraste
+                        bordercolor="gray",       # Borde gris
+                        namelength=-1            # Mostrar nombres completos
+                    )
+                ).update_traces(
+                    # SOLUCIÓN: Template personalizado para el hover
+                    hovertemplate="<b>%{y}</b><br>" +
+                                "Importancia: %{x:.1%}<br>" +
+                                "Grupo: %{customdata[0]}<br>" +
+                                "<extra></extra>",  # Elimina el box del nombre de la serie
+                    customdata=feature_importance.head(10)[['group']].values
                 )
             )
         ], className="bg-white rounded-lg shadow-md p-6 mb-6"),
@@ -1434,21 +1953,21 @@ def render_model_explanation():
                 html.Div([
                     html.H4("87% de Precisión", className="text-2xl font-bold text-green-600 mb-2"),
                     html.P("El modelo acierta en 87 de cada 100 predicciones", className="text-gray-600")
-                ], className="text-center p-4"),
+                ], className="text-center p-4 flex flex-col h-full justify-between"),
+
                 html.Div([
-                    html.H4("10,000+ Pacientes", className="text-2xl font-bold text-blue-600 mb-2"),
-                    html.P("Entrenado con datos de más de 10,000 pacientes reales", className="text-gray-600")
-                ], className="text-center p-4"),
+                    html.H4("1,000+ Pacientes", className="text-2xl font-bold text-blue-600 mb-2"),
+                    html.P("Entrenado con datos de más de 1,000 pacientes reales", className="text-gray-600")
+                ], className="text-center p-4 flex flex-col h-full justify-between"),
+
                 html.Div([
-                    html.H4("5 Años de Datos", className="text-2xl font-bold text-purple-600 mb-2"),
+                    html.H4("6 Años de Datos", className="text-2xl font-bold text-purple-600 mb-2"),
                     html.P("Utiliza información longitudinal de seguimiento", className="text-gray-600")
-                ], className="text-center p-4"),
-                html.Div([
-                    html.H4("Validado Clínicamente", className="text-2xl font-bold text-red-600 mb-2"),
-                    html.P("Probado en múltiples hospitales y poblaciones", className="text-gray-600")
-                ], className="text-center p-4")
-            ], className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 rounded-lg p-6")
+                ], className="text-center p-4 flex flex-col h-full justify-between")
+
+            ], className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-gray-50 rounded-lg p-6 items-stretch")
         ], className="bg-white rounded-lg shadow-md p-6")
+
     ])
 
 def render_faq():
@@ -1507,38 +2026,131 @@ def render_faq():
     ])
 
 def render_resources():
-    """Recursos adicionales"""
+    """Recursos adicionales específicos para Argentina"""
     resources = [
         {
             "category": "Organizaciones Oficiales",
             "items": [
-                {"name": "Alzheimer's Association", "url": "https://www.alz.org", "description": "Organización líder mundial en cuidado, apoyo e investigación del Alzheimer"},
-                {"name": "Instituto Nacional del Envejecimiento", "url": "https://www.nia.nih.gov", "description": "Información científica sobre envejecimiento y demencia"},
-                {"name": "Fundación Alzheimer España", "url": "https://www.fundacionalzheimeresp.org", "description": "Recursos en español sobre Alzheimer y demencias"}
+                {
+                    "name": "ADNI - Alzheimer's Disease Neuroimaging Initiative",
+                    "url": "https://adni.loni.usc.edu/",
+                    "description": "Iniciativa internacional líder en investigación de biomarcadores para Alzheimer. Argentina participa como Arg-ADNI desde 2013, siendo el primer centro ADNI en Latinoamérica."
+                },
+                {
+                    "name": "A.L.M.A. - Asociación Lucha contra el Mal de Alzheimer",
+                    "url": "https://www.alma-alzheimer.org.ar/",
+                    "description": "Fundada en 1989, es la principal organización argentina dedicada al estudio, apoyo y tratamiento del Alzheimer y alteraciones cognitivas similares."
+                },
+                {
+                    "name": "Alzheimer Argentina",
+                    "url": "https://alzheimer.org.ar/",
+                    "description": "Asociación enfocada en investigación, docencia y tratamiento del Alzheimer. Promueve la prevención, diagnóstico diferencial y estudios de tratamiento."
+                },
+                {
+                    "name": "Programa Nacional de Deterioro Cognitivo - Ministerio de Desarrollo Social",
+                    "url": "https://www.argentina.gob.ar/desarrollosocial/programas/deteriorocognitivo",
+                    "description": "Programa gubernamental para promoción de calidad de vida de personas con deterioro cognitivo, Alzheimer y otras demencias."
+                },
+                {
+                    "name": "Alzheimer's Association - Sección Argentina",
+                    "url": "https://www.alz.org/ar/demencia-alzheimer-argentina.asp",
+                    "description": "Brazo argentino de la organización mundial líder en cuidado, apoyo e investigación del Alzheimer con recursos en español."
+                }
             ]
         },
         {
             "category": "Prevención y Estilo de Vida",
             "items": [
-                {"name": "FINGER Study", "url": "#", "description": "Estudio sobre intervención multidomain para prevenir deterioro cognitivo"},
-                {"name": "Brain Training Games", "url": "#", "description": "Juegos científicamente validados para estimulación cognitiva"},
-                {"name": "Mediterranean Diet Guide", "url": "#", "description": "Guía completa de la dieta mediterránea para salud cerebral"}
+                {
+                    "name": "Instituto de Neurología Cognitiva (INECO)",
+                    "url": "https://www.ineco.org.ar/",
+                    "description": "Centro líder en Argentina para evaluación neurocognitiva, programas de estimulación cognitiva y estrategias de prevención del deterioro mental."
+                },
+                {
+                    "name": "Fundación INECO para la Investigación en Neurociencias Cognitivas",
+                    "url": "https://www.ineco.org.ar/fundacion/",
+                    "description": "Programas de investigación en prevención del Alzheimer, entrenamiento cognitivo y promoción de salud cerebral en población argentina."
+                },
+                {
+                    "name": "Centro de Memoria del Hospital Italiano",
+                    "url": "https://www.hospitalitaliano.org.ar/",
+                    "description": "Programas especializados en evaluación de memoria, detección temprana y estrategias preventivas del deterioro cognitivo."
+                },
+                {
+                    "name": "Neurología Cognitiva - Hospital de Clínicas",
+                    "url": "https://www.hospitaldeclinicas.uba.ar/",
+                    "description": "Servicio universitario público que ofrece evaluación neuropsicológica, programas de estimulación cognitiva y orientación en prevención."
+                },
+                {
+                    "name": "Programa de Actividad Física para Adultos Mayores - Buenos Aires Ciudad",
+                    "url": "https://www.buenosaires.gob.ar/desarrollohumanoyhabitat/adultos-mayores",
+                    "description": "Actividades físicas estructuradas para adultos mayores como factor protector contra el deterioro cognitivo."
+                }
             ]
         },
         {
             "category": "Apoyo y Cuidadores",
             "items": [
-                {"name": "Caregiver Support Groups", "url": "#", "description": "Grupos de apoyo para familiares y cuidadores"},
-                {"name": "Respite Care Services", "url": "#", "description": "Servicios de cuidado temporal para dar descanso a cuidadores"},
-                {"name": "Legal and Financial Planning", "url": "#", "description": "Planificación legal y financiera para familias afectadas"}
+                {
+                    "name": "Grupos de Apoyo A.L.M.A.",
+                    "url": "https://www.alma-alzheimer.org.ar/es/servicios-alma/grupos-de-apoyo",
+                    "description": "Grupos de apoyo presenciales y virtuales para familiares y cuidadores de personas con Alzheimer. Reuniones regulares en CABA y GBA."
+                },
+                {
+                    "name": "Red Argentina de Cuidadores Domiciliarios",
+                    "url": "https://www.argentina.gob.ar/desarrollosocial/programas/deteriorocognitivo",
+                    "description": "Capacitación y formación de cuidadores especializados en demencia. Programa gubernamental de apoyo y certificación."
+                },
+                {
+                    "name": "Fundación Navarro Viola - Programa Alzheimer",
+                    "url": "https://www.navarroviola.org/",
+                    "description": "Apoyo integral a familias afectadas por Alzheimer, incluyendo asistencia social, psicológica y recursos comunitarios."
+                },
+                {
+                    "name": "Centro de Día para Adultos Mayores - CABA",
+                    "url": "https://www.buenosaires.gob.ar/desarrollohumanoyhabitat/adultos-mayores",
+                    "description": "Centros diurnos especializados en cuidado de personas con deterioro cognitivo, ofreciendo respiro a cuidadores familiares."
+                },
+                {
+                    "name": "Línea de Asistencia Psicológica - Gobierno de la Ciudad",
+                    "url": "tel:147",
+                    "description": "Línea telefónica gratuita 147 disponible 24/7 para orientación y apoyo psicológico a familiares y cuidadores en crisis."
+                }
             ]
         },
         {
             "category": "Investigación y Tratamientos",
             "items": [
-                {"name": "ClinicalTrials.gov", "url": "https://clinicaltrials.gov", "description": "Base de datos de ensayos clínicos en curso"},
-                {"name": "Alzheimer's Drug Discovery", "url": "#", "description": "Últimos avances en tratamientos y medicamentos"},
-                {"name": "Research Participation", "url": "#", "description": "Cómo participar en estudios de investigación"}
+                {
+                    "name": "Arg-ADNI - Instituto de Neurociencias FLENI",
+                    "url": "https://www.fleni.org.ar/",
+                    "description": "Primer centro ADNI de Latinoamérica ubicado en Buenos Aires. Líder en investigación de biomarcadores y ensayos clínicos para Alzheimer."
+                },
+                {
+                    "name": "Centro de Investigaciones en Neurociencias de Córdoba",
+                    "url": "https://www.unc.edu.ar/",
+                    "description": "Investigación universitaria en neurociencias cognitivas, estudios longitudinales de envejecimiento y desarrollo de biomarcadores."
+                },
+                {
+                    "name": "Registro Nacional de Ensayos Clínicos - ANMAT",
+                    "url": "https://www.argentina.gob.ar/anmat",
+                    "description": "Base de datos oficial de ensayos clínicos en curso en Argentina, incluyendo estudios sobre Alzheimer y tratamientos experimentales."
+                },
+                {
+                    "name": "Red Latinoamericana de Investigación en Demencia (ReDLat)",
+                    "url": "https://redlat.org/",
+                    "description": "Consorcio regional que incluye centros argentinos para investigación colaborativa en demencia y desarrollo de políticas públicas."
+                },
+                {
+                    "name": "Instituto de Neurología Cognitiva (INECO) - Investigación",
+                    "url": "https://www.ineco.org.ar/investigacion/",
+                    "description": "Centro pionero en investigación sobre demencia frontotemporal, Alzheimer y desarrollo de herramientas diagnósticas innovadoras."
+                },
+                {
+                    "name": "ClinicalTrials.gov - Estudios en Argentina",
+                    "url": "https://clinicaltrials.gov/search?locn=Argentina&cond=Alzheimer%20Disease",
+                    "description": "Base de datos internacional filtrada para ensayos clínicos de Alzheimer activos en Argentina."
+                }
             ]
         }
     ]
@@ -1546,7 +2158,7 @@ def render_resources():
     return html.Div([
         html.Div([
             html.I(className="fas fa-external-link-alt text-indigo-500 mr-2"),
-            "Enlaces útiles a recursos confiables sobre Alzheimer, prevención y apoyo"
+            "Enlaces útiles a recursos argentinos confiables sobre Alzheimer, prevención y apoyo en español"
         ], className="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-r-lg mb-6"),
         
         html.Div([
@@ -1556,7 +2168,8 @@ def render_resources():
                     html.Div([
                         html.H4(item['name'], className="text-lg font-semibold text-blue-600 mb-2"),
                         html.P(item['description'], className="text-gray-600 text-sm mb-3"),
-                        html.A("Visitar →", href=item['url'], target="_blank", 
+                        html.A("Visitar →" if not item['url'].startswith('tel:') else "Llamar →", 
+                              href=item['url'], target="_blank", 
                               className="text-blue-500 hover:text-blue-700 font-medium text-sm")
                     ], className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow duration-200")
                     for item in category['items']
@@ -1565,20 +2178,77 @@ def render_resources():
             for category in resources
         ], className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"),
         
-        # Contacto de emergencia
+        # Contactos de emergencia específicos para Argentina
         html.Div([
-            html.H3("🚨 En Caso de Emergencia", className="text-xl font-bold text-red-600 mb-4"),
+            html.H3("🚨 Contactos de Emergencia en Argentina", className="text-xl font-bold text-red-600 mb-4"),
             html.Div([
+                # Emergencias médicas
                 html.Div([
                     html.I(className="fas fa-phone text-red-500 text-2xl mr-4"),
                     html.Div([
-                        html.H4("Línea de Crisis 24/7", className="text-lg font-semibold text-gray-800"),
-                        html.P("1-800-272-3900", className="text-xl font-bold text-red-600"),
-                        html.P("Disponible 24 horas, los 7 días de la semana", className="text-gray-600 text-sm")
+                        html.H4("Emergencias Médicas SAME", className="text-lg font-semibold text-gray-800"),
+                        html.P("107", className="text-xl font-bold text-red-600"),
+                        html.P("Servicio de emergencias médicas gratuito 24/7", className="text-gray-600 text-sm")
                     ])
-                ], className="flex items-center p-4 bg-red-50 rounded-lg border border-red-200")
+                ], className="flex items-center p-4 bg-red-50 rounded-lg border border-red-200 mb-3"),
+                
+                # Línea psicológica
+                html.Div([
+                    html.I(className="fas fa-heart text-blue-500 text-2xl mr-4"),
+                    html.Div([
+                        html.H4("Asistencia Psicológica", className="text-lg font-semibold text-gray-800"),
+                        html.P("147", className="text-xl font-bold text-blue-600"),
+                        html.P("Línea gratuita de apoyo psicológico - Ciudad de Buenos Aires", className="text-gray-600 text-sm")
+                    ])
+                ], className="flex items-center p-4 bg-blue-50 rounded-lg border border-blue-200 mb-3"),
+                
+                # A.L.M.A. contacto directo
+                html.Div([
+                    html.I(className="fas fa-users text-green-500 text-2xl mr-4"),
+                    html.Div([
+                        html.H4("A.L.M.A. - Consultas", className="text-lg font-semibold text-gray-800"),
+                        html.P("(011) 4788-4129", className="text-xl font-bold text-green-600"),
+                        html.P("Asociación Lucha contra el Mal de Alzheimer - Lunes a Viernes 9-17hs", className="text-gray-600 text-sm")
+                    ])
+                ], className="flex items-center p-4 bg-green-50 rounded-lg border border-green-200 mb-3"),
+                
+                # INECO contacto
+                html.Div([
+                    html.I(className="fas fa-brain text-purple-500 text-2xl mr-4"),
+                    html.Div([
+                        html.H4("INECO - Consultas Neurológicas", className="text-lg font-semibold text-gray-800"),
+                        html.P("(011) 4807-4700", className="text-xl font-bold text-purple-600"),
+                        html.P("Instituto de Neurología Cognitiva - Turnos y consultas especializadas", className="text-gray-600 text-sm")
+                    ])
+                ], className="flex items-center p-4 bg-purple-50 rounded-lg border border-purple-200")
             ])
-        ], className="bg-white rounded-lg shadow-md p-6")
+        ], className="bg-white rounded-lg shadow-md p-6"),
+        
+        # Información adicional sobre recursos argentinos
+        html.Div([
+            html.H3("📋 Información Importante para Pacientes en Argentina", className="text-xl font-bold text-gray-800 mb-4"),
+            html.Div([
+                html.Div([
+                    html.H4("🏥 Sistema de Salud", className="text-lg font-semibold text-blue-600 mb-2"),
+                    html.P("En Argentina, la evaluación y tratamiento del Alzheimer está cubierto por el sistema público de salud, obras sociales y medicina prepaga según la Ley 27.306 de Abordaje Integral e Interdisciplinario de las Demencias.", className="text-gray-600 text-sm")
+                ], className="bg-blue-50 border border-blue-200 rounded-lg p-4"),
+                
+                html.Div([
+                    html.H4("💊 Medicamentos", className="text-lg font-semibold text-green-600 mb-2"),
+                    html.P("Los medicamentos específicos para Alzheimer (donepezilo, rivastigmina, memantina) están incluidos en el Programa Médico Obligatorio (PMO) y disponibles en farmacias públicas y del PAMI.", className="text-gray-600 text-sm")
+                ], className="bg-green-50 border border-green-200 rounded-lg p-4"),
+                
+                html.Div([
+                    html.H4("📄 Certificado de Discapacidad", className="text-lg font-semibold text-yellow-600 mb-2"),
+                    html.P("Las personas con Alzheimer pueden obtener el Certificado Único de Discapacidad (CUD) que otorga beneficios como cobertura del 100% de tratamientos, medicamentos y asistencia domiciliaria.", className="text-gray-600 text-sm")
+                ], className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"),
+                
+                html.Div([
+                    html.H4("👨‍⚕️ Especialistas", className="text-lg font-semibold text-purple-600 mb-2"),
+                    html.P("Los neurólogos especializados en demencia y neuropsicólogos están disponibles en hospitales públicos como el Hospital de Clínicas, Hospital Italiano, FLENI, y centros especializados como INECO.", className="text-gray-600 text-sm")
+                ], className="bg-purple-50 border border-purple-200 rounded-lg p-4")
+            ], className="grid grid-cols-1 md:grid-cols-2 gap-4")
+        ], className="bg-white rounded-lg shadow-md p-6 mt-6")
     ])
 
 # ==========================================
@@ -1671,7 +2341,7 @@ def create_header():
             ], className="text-sm", style={'color': config.colors['muted']}),
             html.Div([
                 html.I(className="fas fa-users mr-2", style={'color': config.colors['secondary']}),
-                f"{len(sample_data)} pacientes monitoreados"
+                f"≈2000 pacientes monitoreados"
             ], className="text-sm mt-1", style={'color': config.colors['muted']})
         ])
     ], className="shadow-lg rounded-lg p-6 mb-6 flex items-center justify-between",
@@ -1954,6 +2624,24 @@ def create_feature_importance_chart():
         title_font={'color': config.colors['text'], 'size': 18}
     )
 
+
+
+def load_clinical_metrics():
+    """Carga métricas de impacto clínico reales"""
+    try:
+        if config.clinical_metrics_file.exists():
+            with open(config.clinical_metrics_file, 'r', encoding='utf-8') as f:
+                metrics = json.load(f)
+                return metrics
+        else:
+            logger.warning("Métricas clínicas no encontradas")
+            return {}
+    except Exception as e:
+        logger.error(f"Error cargando métricas clínicas: {e}")
+        return {}
+
+# Cargar métricas clínicas
+clinical_metrics = load_clinical_metrics()
 
 # ==========================================
 # EJECUTAR LA APLICACIÓN
