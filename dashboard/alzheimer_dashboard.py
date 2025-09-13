@@ -24,6 +24,7 @@ import mlflow
 import mlflow.pyfunc
 from pathlib import Path
 import warnings
+import re
 warnings.filterwarnings('ignore')
 
 # Configuración de rutas
@@ -606,60 +607,191 @@ def debug_files_status():
                 if item.is_file():
                     logger.info(f"   - {item.relative_to(models_dir)}")
 
+def get_model_feature_names(model):
+    """
+    Intenta obtener una lista de feature names esperadas por el modelo.
+    Maneja varios tipos: sklearn (feature_names_in_), xgboost Booster, wrappers con get_booster, y atributos comunes.
+    Devuelve list[str] o None si no se pudo obtener.
+    """
+    try:
+        # sklearn >= 1.0
+        if hasattr(model, "feature_names_in_"):
+            return list(model.feature_names_in_)
+
+        # XGBoost sklearn wrapper (XGBClassifier/XGBRegressor) -> booster().feature_names
+        if hasattr(model, "get_booster"):
+            try:
+                booster = model.get_booster()
+                if booster is not None and hasattr(booster, "feature_names") and booster.feature_names is not None:
+                    return list(booster.feature_names)
+            except Exception:
+                pass
+
+        # direct attribute (some saved boosters)
+        if hasattr(model, "_Booster"):
+            booster = getattr(model, "_Booster")
+            if booster is not None and hasattr(booster, "feature_names") and booster.feature_names is not None:
+                return list(booster.feature_names)
+
+        # generic attribute
+        if hasattr(model, "feature_names"):
+            fn = getattr(model, "feature_names")
+            if isinstance(fn, (list, tuple, np.ndarray)):
+                return list(fn)
+
+        # mlflow pyfunc models sometimes expose a "metadata" or "metadata" attribute with signature
+        if hasattr(model, "metadata"):
+            metadata = getattr(model, "metadata")
+            try:
+                # best-effort: mlflow pyfunc pyfunc-loaded model may have .metadata.get("signature")
+                sig = metadata.get("signature", None) if isinstance(metadata, dict) else None
+                if sig and "inputs" in sig:
+                    return [inp["name"] for inp in sig["inputs"]]
+            except Exception:
+                pass
+
+    except Exception:
+        pass
+
+    return None
+
+
+def _normalize_name(s):
+    if s is None:
+        return ""
+    return re.sub(r'[^a-z0-9]', '', str(s).lower())
+
+# mapa de alias (best-effort) — extiéndelo según tus nombres reales
+_ALIAS_MAP = {
+    'age': ['age', 'edad', 'age_years', 'age_at_visit_estimated'],
+    'education_years': ['education_years', 'educ', 'years_of_education'],
+    'mmse_score': ['mmse_score', 'mmse', 'mmse_total'],
+    'cdr_score': ['cdr_score', 'cdrsb', 'cdr'],
+    'tau_protein': ['tau_protein', 'ptau', 'ptau181', 'tau'],
+    'abeta_42': ['abeta_42', 'abeta42', 'ab42', 'abeta'],
+    'apoe4_carriers': ['apoe4_carriers', 'apoe4', 'apoe_e4', 'apoe_e4_carrier']
+}
+
+def _build_alias_reverse_map():
+    rev = {}
+    for canonical, variants in _ALIAS_MAP.items():
+        for v in variants:
+            rev[_normalize_name(v)] = canonical
+    return rev
+_ALIAS_REVERSE = _build_alias_reverse_map()
 
 def predict_with_real_model(patient_data, model_name=None):
-    """Hace predicción con modelo real (MLflow o pickle)"""
+    """Predicción robusta que intenta mapear nombres de input a los nombres esperados por el modelo."""
     try:
-        # Si no se especifica modelo, usar el primero disponible
         if model_name is None and loaded_models:
             model_name = list(loaded_models.keys())[0]
             logger.info(f"Usando primer modelo disponible: {model_name}")
-        
+
         logger.info(f"Intentando predicción con modelo: {model_name}")
         logger.info(f"Modelos disponibles: {list(loaded_models.keys())}")
-        
-        if loaded_models and model_name in loaded_models:
-            model_info = loaded_models[model_name]
-            model = model_info['model']
-            
-            # Preparar datos para predicción
-            input_df = pd.DataFrame([patient_data])
-            
-            # Verificar si necesitamos solo ciertas columnas (para el modelo pickle)
+
+        if not loaded_models or model_name not in loaded_models:
+            logger.warning(f"⚠️ Modelo {model_name} no encontrado, usando cálculo simulado")
+            return None, None
+
+        model_info = loaded_models[model_name]
+        model = model_info['model']
+
+        # input como DataFrame único
+        input_df = pd.DataFrame([patient_data])
+
+        # obtener features esperadas por el modelo
+        expected = get_model_feature_names(model)
+        if expected:
+            logger.info(f"Modelo {model_name} declara {len(expected)} features.")
+            expected = list(expected)
+            # Normalización: construir maps normalizados
+            expected_norm_map = { _normalize_name(c): c for c in expected }
+            input_keys = list(input_df.columns)
+            input_norm_map = { _normalize_name(k): k for k in input_keys }
+
+            # Mapeo resultado: expected_col -> source_key (si se encuentra)
+            mapping = {}
+            for enorm, ecol in expected_norm_map.items():
+                # 1) Coincidencia exacta normalizada en input
+                if enorm in input_norm_map:
+                    mapping[ecol] = input_norm_map[enorm]
+                    continue
+                # 2) alias reverse map (try to map canonical names)
+                if enorm in _ALIAS_REVERSE:
+                    canonical = _ALIAS_REVERSE[enorm]
+                    # si user provided canonical (normalized)
+                    if _normalize_name(canonical) in input_norm_map:
+                        mapping[ecol] = input_norm_map[_normalize_name(canonical)]
+                        continue
+                # 3) intentar buscar en input por tokens (contains)
+                found = None
+                for inorm, ik in input_norm_map.items():
+                    if inorm in enorm or enorm in inorm:
+                        found = ik
+                        break
+                if found:
+                    mapping[ecol] = found
+                    continue
+                # no se encontró — mapping quedará vacío y se rellenará luego
+            # Logging del mapeo
+            matched = len(mapping)
+            logger.info(f"Feature mapping: {matched}/{len(expected)} features mapeadas desde entradas provistas.")
+            if matched < max(1, int(0.6*len(expected))):
+                # si se mapearon muy pocas columnas, emitimos advertencia
+                logger.warning(f"Pocas features mapeadas ({matched}/{len(expected)}). Revisa nombres de campos enviados desde la UI.")
+            # Crear columnas en input_df para expected — asignar valores mapeados
+            for col in expected:
+                if col in mapping:
+                    src_key = mapping[col]
+                    input_df[col] = input_df[src_key]
+                else:
+                    # si no existe en input, intentar medianas del dataset
+                    if 'sample_data' in globals() and isinstance(sample_data, pd.DataFrame) and col in sample_data.columns:
+                        input_df[col] = sample_data[col].median()
+                    else:
+                        input_df[col] = 0
+            # Reordenar según expected
+            input_df = input_df[expected]
+        else:
+            # Si no se conocen features, quedarnos con lo que dio el usuario (fallback previo)
+            logger.info("No se pudieron obtener feature names del modelo; usando las columnas provistas por usuario.")
+            # fallback pequeño ya existente
             if model_name == 'pickle_xgboost':
-                # El modelo pickle puede necesitar columnas específicas
-                # Mantener solo las columnas que el modelo espera
-                expected_features = [
-                    'age', 'education_years', 'mmse_score', 'cdr_score', 
-                    'tau_protein', 'abeta_42', 'apoe4_carriers'
-                ]
-                available_features = [col for col in expected_features if col in input_df.columns]
-                input_df = input_df[available_features]
-                logger.info(f"Usando {len(available_features)} características para predicción pickle")
-            
-            # Hacer predicción
+                expected_small = ['age', 'education_years', 'mmse_score', 'cdr_score', 'tau_protein', 'abeta_42', 'apoe4_carriers']
+                for col in expected_small:
+                    if col not in input_df.columns:
+                        input_df[col] = 0
+                input_df = input_df[[c for c in expected_small if c in input_df.columns]]
+
+        # Intentar predecir
+        try:
             if hasattr(model, 'predict_proba'):
-                # Para modelos con predict_proba
                 prediction_proba = model.predict_proba(input_df)
                 probability = prediction_proba[0][1] if prediction_proba.shape[1] > 1 else prediction_proba[0][0]
             elif hasattr(model, 'predict'):
-                # Para modelos MLflow o predict simple
                 prediction = model.predict(input_df)
-                probability = prediction[0] if isinstance(prediction, (list, np.ndarray)) else prediction
+                probability = prediction[0] if isinstance(prediction, (list, np.ndarray)) else float(prediction)
             else:
-                logger.error(f"Modelo {model_name} no tiene método predict")
+                logger.error(f"Modelo {model_name} no tiene método predict/predict_proba")
                 return None, None
-            
-            # Asegurar que la probabilidad esté en rango [0, 1]
-            probability = float(np.clip(probability, 0, 1))
-            
-            logger.info(f"✅ Predicción exitosa con {model_name}: {probability:.3f}")
-            return probability, model_info['metrics']
-            
-        else:
-            logger.warning(f"⚠️ Modelo {model_name} no encontrado, usando cálculo simulado")
-            return None, None
-            
+        except Exception as inner_e:
+            logger.warning(f"Error al predecir con {model_name}: {inner_e}. Intentando fallback con numpy array.")
+            try:
+                arr = input_df.values.astype(float)
+                if hasattr(model, 'predict_proba'):
+                    probability = model.predict_proba(arr)[0][1]
+                else:
+                    probability = model.predict(arr)[0]
+            except Exception as inner2:
+                logger.error(f"Fallback falló para {model_name}: {inner2}")
+                return None, None
+
+        probability = float(np.clip(probability, 0, 1))
+        logger.info(f"✅ Predicción exitosa con {model_name}: {probability:.3f}")
+        # adicional: log corto de qué columnas del input variaron (opcional)
+        return probability, model_info.get('metrics', {})
+
     except Exception as e:
         logger.error(f"❌ Error en predicción con {model_name}: {e}")
         return None, None
@@ -1045,14 +1177,14 @@ def update_risk_evaluation(n_clicks, age, education, apoe4, mmse, cdr, tau, abet
         'social_engagement': 5
     }
     
-    # Intentar predicción con modelo real
+   # Intentar predicción con modelo real
     real_prediction, model_metrics = predict_with_real_model(patient_data)
 
     if real_prediction is not None:
         risk_probability = real_prediction
         logger.info(f"Predicción real: {risk_probability:.3f}")
     else:
-        # Fallback a cálculo simulado
+        # Fallback a cálculo simulado (solo aquí)
         risk_score = (
             (patient_data['age'] - 50) / 40 * 0.2 +
             (30 - patient_data['mmse_score']) / 30 * 0.25 +
@@ -1061,8 +1193,8 @@ def update_risk_evaluation(n_clicks, age, education, apoe4, mmse, cdr, tau, abet
             (800 - patient_data['abeta_42']) / 400 * 0.1 +
             patient_data['apoe4_carriers'] / 2 * 0.1
         )
-    risk_probability = max(0, min(1, 1 / (1 + np.exp(-max(-5, min(5, risk_score))))))
-    logger.info("Usando cálculo simulado")
+        risk_probability = max(0, min(1, 1 / (1 + np.exp(-max(-5, min(5, risk_score))))))
+        logger.info("Usando cálculo simulado")
 
     risk_category = get_risk_category(risk_probability)
     risk_color = get_risk_color(risk_probability)
