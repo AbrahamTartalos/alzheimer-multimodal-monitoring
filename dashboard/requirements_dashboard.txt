@@ -57,13 +57,13 @@ werkzeug==3.0.1
 #    python alzheimer_dashboard.py
 #
 # 3. Para producción (Render):
-#    Render instalará automáticamente estas dependencias
+#    Render instalará automáticamente las dependencias en 'requirements.txt'
 #    usando gunicorn como servidor WSGI
 #
 # ==========================================
 # COMPATIBILIDAD:
 # ==========================================
 # - Python 3.10+
-# - Navegadores modernos (Chrome, Brave, Safari, Edge)
+# - Navegadores modernos (Brave, Chrome, Safari, Edge)
 # - Responsive design para móviles y tablets
 # ==========================================

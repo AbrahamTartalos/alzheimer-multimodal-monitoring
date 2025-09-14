@@ -25,6 +25,7 @@ import mlflow.pyfunc
 from pathlib import Path
 import warnings
 import re
+import os
 warnings.filterwarnings('ignore')
 
 # Configuración de rutas
@@ -942,6 +943,12 @@ def generate_recommendations(patient_data, risk_prob):
     
     return recommendations
 
+
+# Configuración para producción
+if os.environ.get('RENDER'):
+    import logging
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
 # ==========================================
 # INICIALIZACIÓN DE LA APP DASH
 # ==========================================
@@ -950,6 +957,9 @@ app = dash.Dash(__name__, external_stylesheets=[
     'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ])
+
+# EXPONER EL SERVIDOR PARA GUNICORN
+server = app.server
 
 # Permitir callbacks en componentes que se cargan dinámicamente
 app.config.suppress_callback_exceptions = True
@@ -2780,9 +2790,14 @@ clinical_metrics = load_clinical_metrics()
 # ==========================================
 
 if __name__ == '__main__':
+    # Configuración para desarrollo local
     try:
         app.run_server(debug=True, host='127.0.0.1', port=8050, 
                       threaded=True, use_reloader=False, dev_tools_hot_reload=False)
     except Exception as e:
         print(f"Error al iniciar el servidor: {e}")
         app.run_server(debug=False, host='127.0.0.1', port=8050)
+else:
+    # Configuración para producción en Render
+    port = int(os.environ.get('PORT', 10000))
+    app.run_server(debug=False, host='0.0.0.0', port=port)
