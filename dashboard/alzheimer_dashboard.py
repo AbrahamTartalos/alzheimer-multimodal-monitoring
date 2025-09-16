@@ -20,8 +20,6 @@ from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
 # Nuevos imports para integración
-import mlflow
-import mlflow.pyfunc
 from pathlib import Path
 import warnings
 import re
@@ -36,6 +34,26 @@ REPORTS_PATH = PROJECT_ROOT / "reports" / "evaluation"
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# -------------------------
+# MLflow opcional (controlado por la variable de entorno USE_MLFLOW)
+# -------------------------
+MLFLOW_ENABLED = os.environ.get("USE_MLFLOW", "true").lower() not in ("0", "false", "no")
+mlflow = None
+mlflow_available = False
+
+if MLFLOW_ENABLED:
+    try:
+        import mlflow
+        import mlflow.pyfunc
+        mlflow_available = True
+        logger.info("MLflow importado correctamente.")
+    except Exception as e:
+        # Si mlflow no está instalado, lo registramos y continuamos sin MLflow.
+        logger.warning(f"mlflow no disponible en el entorno: {e}. Procediendo sin MLflow.")
+else:
+    logger.info("USE_MLFLOW=false -> MLflow deshabilitado por variable de entorno.")
+
 
 # ==========================================
 # CONFIGURACIÓN Y DATOS SIMULADOS
@@ -142,7 +160,7 @@ class AlzheimerDashboardConfig:
         self.real_data_path = DATA_PATH
         
         # MLflow configuración
-        self.mlflow_tracking_uri = "file:../mlruns"
+        self.mlflow_tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "file:./mlruns")
         self.experiments_mapping = {
             'regression': 'alzheimer_multimodal_monitoring',
             'classification': 'Default',  # Aquí está el ensemble_classification
@@ -187,6 +205,11 @@ config = AlzheimerDashboardConfig()
 def verify_mlflow_setup():
     """Verificar configuración MLflow"""
     logger.info("=== VERIFICACIÓN MLFLOW ===")
+
+    # Si mlflow no está disponible, salir temprano
+    if not mlflow_available:
+        logger.info("MLflow deshabilitado o no disponible; se omite verificación de mlruns.")
+        return
     
     # Verificar directorio mlruns
     mlruns_path = Path("./mlruns")
@@ -405,6 +428,10 @@ def load_mlflow_models(winners_df=None):
     """Carga modelos desde MLflow usando los experimentos correctos"""
     models = {}
     
+    if not mlflow_available:
+        logger.info("MLflow no disponible - omitiendo carga de modelos desde MLflow.")
+        return {}
+
     try:
         # Configurar MLflow con la ruta correcta
         mlflow.set_tracking_uri(config.mlflow_tracking_uri)
@@ -526,6 +553,11 @@ def load_pickle_model():
             logger.warning(f"❌ Modelo pickle no encontrado: {pickle_model_path}")
             return {}
             
+    except ModuleNotFoundError as me:
+        logger.error(f"❌ Error cargando modelo pickle (falta librería): {me}")
+        if "xgboost" in str(me).lower():
+            logger.error("El pickle requiere 'xgboost'. Añade 'xgboost' a requirements.txt y redeploy.")
+        return {}
     except Exception as e:
         logger.error(f"❌ Error cargando modelo pickle: {e}")
         return {}
