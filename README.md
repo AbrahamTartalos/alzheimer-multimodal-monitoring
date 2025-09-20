@@ -216,19 +216,41 @@ python landing_page/app.py
 ## 📊 Datos
 
 ### **Fuentes de Datos**
-- **ADNI (Alzheimer's Disease Neuroimaging Initiative)**: Datos principales del proyecto
-  - Neuroimagen: MRI estructural y PET
-  - Biomarcadores: CSF y plasma
-  - Datos genéticos: APOE y otros marcadores
-  - Datos clínicos: Diagnósticos y evaluaciones cognitivas
-  - Datos demográficos: Edad, género, educación
 
-- **Datos Sintéticos**: Generados para complementar el análisis
-  - Patrones de actividad diaria
-  - Datos de sueño
+#### **ADNI (Alzheimer's Disease Neuroimaging Initiative)**
+Los datos principales de este proyecto provienen de la base de datos ADNI, una iniciativa de colaboración público-privada que recopila, valida y utiliza datos para la investigación del Alzheimer.
+
+**⚠️ Importante: Acceso a los Datos**
+- Los datos de ADNI **NO están incluidos** en este repositorio debido a las políticas de privacidad y términos de uso de ADNI
+- Para acceder a los datos ADNI, los investigadores deben:
+  1. Registrarse en el portal oficial de ADNI (http://adni.loni.usc.edu)
+  2. Completar el proceso de solicitud de acceso a datos
+  3. Aceptar los términos de uso y acuerdos de confidencialidad
+  4. Esperar la aprobación del comité de ADNI
+
+**Tipos de Datos ADNI Utilizados:**
+- **Neuroimagen**: MRI estructural y imágenes PET
+- **Biomarcadores**: Líquido cefalorraquídeo (CSF) y plasma
+- **Datos genéticos**: APOE y otros marcadores genéticos
+- **Datos clínicos**: Diagnósticos y evaluaciones cognitivas (MMSE, CDR, ADAS)
+- **Datos demográficos**: Edad, género, nivel educativo
+
+#### **Datos Sintéticos Complementarios**
+Para enriquecer el análisis, se generaron datos sintéticos que simulan:
+- Patrones de actividad diaria
+- Datos de calidad de sueño
+- Métricas de dispositivos wearables
+
+*Estos datos sintéticos SÍ están disponibles en el repositorio para fines de demostración.*
+
+### **Estructura de Datos Esperada**
+Una vez obtenidos los datos de ADNI, deben organizarse en la estructura definida en la carpeta `data/raw/ADNI/` según se especifica en la sección de estructura del proyecto.
 
 ### **Consideraciones de Privacidad**
-Todos los datos utilizados siguen las directrices de privacidad establecidas por ADNI. Los datos están desidentificados y se utilizan únicamente para fines de investigación.
+- Todos los datos de ADNI están completamente desidentificados
+- Cumplimiento estricto con las regulaciones HIPAA y directrices éticas
+- Los datos se utilizan exclusivamente para fines de investigación académica
+- No se comparten ni redistribuyen datos originales de ADNI
 
 ## 🤖 Modelos Implementados
 
