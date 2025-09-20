@@ -4,9 +4,9 @@
   <h3>Sistema de Detección Temprana y Monitoreo de Alzheimer mediante Análisis Multimodal</h3>
   <p>Un proyecto de ciencia de datos end-to-end para la predicción y monitorización del Alzheimer</p>
   
-  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+  [![Licencia](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
   [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-  [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
+  [![Contribuciones Bienvenidas](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 </div>
 
 ## 📋 Tabla de Contenidos
@@ -211,7 +211,7 @@ python landing_page/app.py
 | **3. Feature Engineering y Selección** | Extracción y selección de características | ✅ Completado |
 | **4. Desarrollo de Modelos** | Implementación y entrenamiento de modelos | ✅ Completado |
 | **5. Evaluación y Validación** | Evaluación de performance y validación | ✅ Completado |
-| **6. Implementación Dashboard** | Desarrollo de interfaz web interactiva | 🔄 En progreso |
+| **6. Implementación Dashboard** | Desarrollo de interfaz web interactiva | ✅ Completado |
 
 ## 📊 Datos
 
